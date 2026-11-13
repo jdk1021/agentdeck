@@ -48,5 +48,7 @@ python3 scripts/capture-screenshots.py dist/AgentDeck.app/Contents/MacOS/AgentDe
 
 Fixture port notes: Linux `/proc` stdin checks are replaced by `lsof`; one Cursor fixture tolerates the
 case-insensitive file system; GNU `date`/`timeout` helpers are provided for tests; `sed -i ''` syntax.
-No collector parsing assertion was removed. The upstream update-service and Linux UI watcher suites are
+No collector parsing assertion was removed. The x86_64 CPython build lacks `time.tzset`, which only seven fixture harnesses use to simulate
+time zones (no collector calls it); on that architecture those harness scripts run under the CI's own Python
+while the collector programs still use the bundled interpreter. The upstream update-service and Linux UI watcher suites are
 not run because those parts are replaced by the Swift app.

@@ -49,7 +49,18 @@ tools = root / 'artifacts/test-tools'; tools.mkdir(parents=True, exist_ok=True)
 for name in ['date', 'timeout']:
     source = root / 'scripts/test-tools' / name
     shutil.copy2(source, tools / name); (tools / name).chmod(0o755)
-env = dict(os.environ, PATH=os.pathsep.join([str(python.parent), str(root / 'Runtime/tools'), str(tools), '/usr/bin', '/bin', '/usr/sbin', '/sbin']))
+path = [str(python.parent), str(root / 'Runtime/tools'), str(tools), '/usr/bin', '/bin', '/usr/sbin', '/sbin']
+# Some fixture harnesses switch time zones with time.tzset(), which the x86_64 python-build-standalone
+# CPython lacks. No collector uses it. Only then do the harness scripts' `python3` come from the
+# interpreter running this script; collector programs keep the bundled interpreter via their shebang.
+if subprocess.run([str(python), '-c', 'import time; time.tzset'], capture_output=True).returncode != 0:
+    harness = tools / 'harness-python'; harness.mkdir(exist_ok=True)
+    link = harness / 'python3'
+    if link.exists() or link.is_symlink(): link.unlink()
+    link.symlink_to(sys.executable)
+    path.insert(0, str(harness))
+    print(f'note: bundled Python lacks time.tzset; fixture harnesses use {sys.executable}', flush=True)
+env = dict(os.environ, PATH=os.pathsep.join(path))
 env['AGENTDECK_TEST_PYTHON'] = str(python)
 logs = root / 'artifacts/collector-logs'; logs.mkdir(exist_ok=True)
 tests = sorted((stage / 'test/shell.d').glob('agent-usage*-test.sh'))

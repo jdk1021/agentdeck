@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""A process-group deadline for upstream collector integration fixtures."""
+import os
+import signal
+import subprocess
+import sys
+args = sys.argv[1:]
+if args and args[0] == '--preserve-status': args.pop(0)
+while args and args[0].startswith('--kill-after='): args.pop(0)
+seconds = float(args.pop(0).rstrip('s'))
+proc = subprocess.Popen(args, start_new_session=True)
+try:
+    sys.exit(proc.wait(timeout=seconds))
+except subprocess.TimeoutExpired:
+    os.killpg(proc.pid, signal.SIGKILL)
+    proc.wait()
+    sys.exit(124)

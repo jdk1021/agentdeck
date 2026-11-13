@@ -1,0 +1,11 @@
+.build/
+dist/
+.DS_Store
+*.xcuserstate
+.swiftpm/
+artifacts/
+.venv/
+Runtime/
+__pycache__/
+*.pyc
+CLAUDE_HANDOFF.md

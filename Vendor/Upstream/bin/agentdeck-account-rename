@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# agentdeck:summary=Rename a Claude, Codex, or Grok subscription account
+# agentdeck:args=[claude|codex|grok] <account> <name>
+# agentdeck:examples=agentdeck agent account rename primary Hey | agentdeck agent account rename codex side Side project
+
+set -uo pipefail
+
+# The provider can be left out when it's your default agent:
+# `agentdeck agent account rename primary Hey`.
+if [[ ${1:-} != "claude" && ${1:-} != "codex" && ${1:-} != "grok" ]]; then
+  default=$(agentdeck-default-agent)
+  [[ $default == "claude" || $default == "codex" || $default == "grok" ]] && set -- "$default" "$@"
+fi
+
+if [[ ${1:-} != "claude" && ${1:-} != "codex" && ${1:-} != "grok" ]] || (( $# < 3 )); then
+  echo "Usage: agentdeck-account-rename [claude|codex|grok] <account> <name>" >&2
+  exit 1
+fi
+
+account=$(agentdeck-account-state rename "$@") || exit 1
+echo "Renamed to $(jq -r .label <<<"$account"). Switch to it with: agentdeck agent account use $1 $(jq -r .id <<<"$account")"
+# The panel reads account names from the usage record.
+agentdeck-collect-update --limits-only "$1" >/dev/null 2>&1 &

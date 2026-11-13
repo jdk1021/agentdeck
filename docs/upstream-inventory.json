@@ -1,0 +1,148 @@
+{
+  "tag": "v4.5.0",
+  "commit": "ac2690cd7be4f47e4a255f5e2e78d904d436b068",
+  "latestStable": "v4.5.0",
+  "collectors": [
+    {
+      "id": "agy",
+      "name": "Antigravity",
+      "path": "bin/agentdeck-collect-agy",
+      "sha256": "dd3d3736a1ed44a25119ddbc80fdaa18dba603c1561d79d2f2baf0218f6d886b"
+    },
+    {
+      "id": "claude",
+      "name": "Claude Code",
+      "path": "bin/agentdeck-collect-claude",
+      "sha256": "7e27cba7be0725b6e37c9e88d8d206ac942ece8196283cb079568457ff8ff1c2"
+    },
+    {
+      "id": "codex",
+      "name": "Codex",
+      "path": "bin/agentdeck-collect-codex",
+      "sha256": "2f57f4095d2f4548754b4b86caa7bf9d68e4281836b6fd8652bef38fce09d219"
+    },
+    {
+      "id": "copilot",
+      "name": "GitHub Copilot",
+      "path": "bin/agentdeck-collect-copilot",
+      "sha256": "085b7b87abf8e41a7347cd7ec37ce9d900cb0119f49bccafdd0476d45fc68967"
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "path": "bin/agentdeck-collect-cursor",
+      "sha256": "a864ac2c61ebd140a4f0f13a4197777f4ef0c1d0506e2d74e7f9391c4381d074"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "path": "bin/agentdeck-collect-deepseek",
+      "sha256": "337687045d953a6ca1302f9a82911281b27efe65db2a8d3d065805178c4eee5c"
+    },
+    {
+      "id": "devin",
+      "name": "Devin",
+      "path": "bin/agentdeck-collect-devin",
+      "sha256": "b94a811aa5bf6c778c2313cf2bec1f20d0c32d7923214dc1860cbebce43fbdc8"
+    },
+    {
+      "id": "fireworks",
+      "name": "Fireworks",
+      "path": "bin/agentdeck-collect-fireworks",
+      "sha256": "c3e15e3af745beeb1814a03e3a6d0a08a2bd4fd38474f29dd5858ce40b75ea48"
+    },
+    {
+      "id": "grok",
+      "name": "Grok",
+      "path": "bin/agentdeck-collect-grok",
+      "sha256": "152ef80ff98358b265d38efb17c10d41b7fc4ab832405ca43fa87d93bf449593"
+    },
+    {
+      "id": "grokbot",
+      "name": "Grok Bot",
+      "path": "bin/agentdeck-collect-grokbot",
+      "sha256": "5e199aec383bdf67f11b50567314508ca3518ae423dfaaabb9d58f15462769ed"
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes",
+      "path": "bin/agentdeck-collect-hermes",
+      "sha256": "5f3e885f0a25a4561d91e61c672e10ee6b9c2dcb9d7ef310f5c370c8c78e02cc"
+    },
+    {
+      "id": "kimchi",
+      "name": "Kimchi",
+      "path": "bin/agentdeck-collect-kimchi",
+      "sha256": "507ea1e3dcc79875bd936044f86d40126fb57def8767e289f39d413a55fc421e"
+    },
+    {
+      "id": "kimi",
+      "name": "Kimi",
+      "path": "bin/agentdeck-collect-kimi",
+      "sha256": "0cfd1e17b7d460848a26a39723829eea7662be233b0d500dc6588dfd0a20a4c3"
+    },
+    {
+      "id": "local",
+      "name": "Local models",
+      "path": "bin/agentdeck-collect-local",
+      "sha256": "a78200d8fa5f3ac004b9686e6744c48d7f193314a517cb3b18333598ac0cde27"
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "path": "bin/agentdeck-collect-minimax",
+      "sha256": "0c3d77783e015a0e0ffcba9e2142713dfad8e56ea8aa7aabadca61623604ce5b"
+    },
+    {
+      "id": "muse",
+      "name": "Muse",
+      "path": "bin/agentdeck-collect-muse",
+      "sha256": "75ecc39b6356a34e0363f7a199d6b4ab142c89effddb297600eb2bc267173393"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama Cloud",
+      "path": "bin/agentdeck-collect-ollama",
+      "sha256": "d891624244410cf9057ed774c3d7d829c73f0fe1f19c376f3e3081aefc48892e"
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "path": "bin/agentdeck-collect-opencode",
+      "sha256": "21153ed38d062758edbdc70d51e0e49e86875573d43e300896701d0353c911cc"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "path": "bin/agentdeck-collect-openrouter",
+      "sha256": "7609cf8184c12c32719173961115a9aaafcad021af8f68f5579a290631ef4d96"
+    },
+    {
+      "id": "qwen",
+      "name": "Qwen Code",
+      "path": "bin/agentdeck-collect-qwen",
+      "sha256": "a0deedde64465b69cafa5364788866977d399e4b84d84b0026ea88ad98248ca2"
+    },
+    {
+      "id": "synthetic",
+      "name": "Synthetic",
+      "path": "bin/agentdeck-collect-synthetic",
+      "sha256": "63d8d9eead30018478162fe1aeb38fce191fb78b29c4015f690dcb05677c0159"
+    },
+    {
+      "id": "vibe",
+      "name": "Mistral Vibe",
+      "path": "bin/agentdeck-collect-vibe",
+      "sha256": "087ed08700da60507799848ce90d31b2639e6a8388fd2c15f8361508b8220111"
+    },
+    {
+      "id": "zai",
+      "name": "Z.ai",
+      "path": "bin/agentdeck-collect-zai",
+      "sha256": "7159cebdf624a07a924a7209f9c61936bdec574f4303576bdf12fe01704fad23"
+    }
+  ],
+  "repositoryID": 994093166,
+  "source": "https://api.github.com/repositories/994093166",
+  "copyright": "Copyright (c) David Heinemeier Hansson"
+}

@@ -3,7 +3,7 @@
 <h1 align="center">AgentDeck</h1>
 
 <p align="center"><b>Every AI coding agent's limits, balances and accounts — in your Mac's menu bar.</b><br>
-<a href="README.ko.md">한국어</a></p>
+<a href="https://jdk1021.github.io/agentdeck/">Website</a> · <a href="README.ko.md">한국어</a></p>
 
 > **Built on the shoulders of [Omarchy](https://github.com/omacom/omarchy).** AgentDeck's 23 usage
 > collectors come straight from the agent-usage tooling in Omarchy (MIT, by David Heinemeier Hansson and
@@ -57,15 +57,22 @@ All screenshots use the app's built-in synthetic demo mode (`--demo`); no real a
 > **Apple silicon only.** AgentDeck requires a Mac with Apple silicon (M1 or later) and macOS 14 or later.
 > Intel Macs are not supported.
 
+```sh
+brew install --cask jdk1021/tap/agentdeck
+```
+
+Or manually:
+
 1. Download `AgentDeck-<version>-macos-arm64.dmg` (or `.zip`) from
    [Releases](../../releases). Check it against the `.sha256` file.
 2. Drag **AgentDeck** to Applications.
 3. The app is **ad-hoc signed and not notarized** (no Apple Developer ID was available). On first launch
    macOS will refuse to open it: open **System Settings → Privacy & Security** and click **Open Anyway**
    for AgentDeck (or Control-click the app → Open). Do not disable Gatekeeper globally.
-4. Optional CLI: `ln -s /Applications/AgentDeck.app/Contents/MacOS/agentdeck ~/.local/bin/agentdeck`
+4. Optional CLI (Homebrew links it for you): `ln -s /Applications/AgentDeck.app/Contents/MacOS/agentdeck ~/.local/bin/agentdeck`
 
-Build from source: see [docs/installation.md](docs/installation.md).
+Build from source: see [docs/installation.md](docs/installation.md). How releases, upstream updates and
+dependency updates are automated: [docs/automation.md](docs/automation.md).
 
 ## Quick start
 

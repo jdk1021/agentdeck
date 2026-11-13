@@ -55,7 +55,7 @@ print(f'inventory: {len(ids)} collectors checked')
 
 # 2. Upstream product name: only the README credit may carry it.
 NAME = re.compile('om' + 'archy', re.I)
-CREDIT_FILES = {'README.md', 'README.ko.md'}
+CREDIT_FILES = {'README.md', 'README.ko.md', 'site/index.html'}
 files = tracked_files()
 for path in files:
     rel = path.relative_to(ROOT).as_posix()

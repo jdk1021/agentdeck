@@ -1,0 +1,85 @@
+name: Upstream sync
+
+# Daily: when the upstream collectors publish a newer stable release, re-vendor it, apply the macOS
+# patches, run the fixture suites and the audit, and open a pull request with the results.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Upstream tag to vendor (default latest stable)
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: macos-15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Check for a newer release
+        id: check
+        run: |
+          set +e
+          latest=$(python3 scripts/sync-upstream.py --check); code=$?
+          set -e
+          tag="${{ inputs.tag }}"; [ -n "$tag" ] || tag="$latest"
+          branch="upstream/$tag"
+          if [ -z "${{ inputs.tag }}" ] && [ "$code" -ne 10 ]; then echo "Up to date ($latest)"; echo "run=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then echo "Branch $branch already exists"; echo "run=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "run=true" >> "$GITHUB_OUTPUT"; echo "tag=$tag" >> "$GITHUB_OUTPUT"; echo "branch=$branch" >> "$GITHUB_OUTPUT"
+      - name: Re-vendor
+        if: steps.check.outputs.run == 'true'
+        run: python3 scripts/sync-upstream.py --tag "${{ steps.check.outputs.tag }}"
+      - name: Runtime, payload patches and tests
+        if: steps.check.outputs.run == 'true'
+        id: tests
+        run: |
+          mkdir -p artifacts
+          python3 scripts/bootstrap-runtime.py
+          check() { name=$1; shift; if "$@" > "artifacts/$name.log" 2>&1; then r=pass; else r="**fail**"; fi; echo "$name=$r" >> "$GITHUB_OUTPUT"; }
+          check prepare python3 scripts/prepare-runtime.py
+          brew install bash
+          check fixtures python3 scripts/test-collectors.py --bash "$(brew --prefix)/bin/bash"
+          echo "suites=$(tail -1 artifacts/fixtures.log)" >> "$GITHUB_OUTPUT"
+          check audit python3 scripts/audit.py
+      - name: Open pull request
+        if: steps.check.outputs.run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${{ steps.check.outputs.branch }}"
+          git add Vendor/Upstream docs/upstream-inventory.json
+          git commit -m "Vendor upstream collectors ${{ steps.check.outputs.tag }}"
+          git push origin "${{ steps.check.outputs.branch }}"
+          draft=""; case "${{ steps.tests.outputs.prepare }}${{ steps.tests.outputs.audit }}${{ steps.tests.outputs.fixtures }}" in *fail*) draft="--draft";; esac
+          gh pr create $draft --base main --head "${{ steps.check.outputs.branch }}" \
+            --title "Upstream collectors ${{ steps.check.outputs.tag }}" \
+            --body "Automated re-vendor of the upstream collectors at \`${{ steps.check.outputs.tag }}\`.
+
+          | Check | Result |
+          |---|---|
+          | macOS payload patches (\`prepare-runtime.py\`) | ${{ steps.tests.outputs.prepare }} |
+          | Upstream fixtures | ${{ steps.tests.outputs.fixtures }} — ${{ steps.tests.outputs.suites }} |
+          | Audit (inventory, matrix, icons, names, secrets) | ${{ steps.tests.outputs.audit }} |
+
+          A failing patch means an upstream anchor moved; a failing audit usually means a new collector needs a
+          support-matrix row and an icon. Logs are attached to the workflow run. CI runs again on this PR when it is
+          updated by a person (pull requests opened by Actions do not start other workflows)."
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.run == 'true'
+        with:
+          name: upstream-sync-logs
+          path: artifacts/

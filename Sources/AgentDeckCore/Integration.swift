@@ -99,6 +99,24 @@ public enum SessionLauncher {
         execve(binary.path, args, vars)
         throw DeckError.message("Could not launch \(binary.lastPathComponent): \(String(cString: strerror(errno)))")
     }
+    /// Runs an interactive program (a provider's sign-in) attached to this terminal and waits for it.
+    /// It stays in the caller's foreground process group with inherited stdin/stdout/stderr, so it can
+    /// read the keyboard. (Foundation's Process moves children out of the foreground group, which makes
+    /// the terminal stop them with SIGTTIN/SIGTTOU as soon as they read input.)
+    public static func runInteractive(binary: URL, arguments: [String], environment: [String: String]) throws -> Int32 {
+        let args = ([binary.path] + arguments).map { strdup($0) } + [nil]
+        let vars = environment.sorted(by: { $0.key < $1.key }).map { strdup($0.key + "=" + $0.value) } + [nil]
+        defer { args.forEach { free($0) }; vars.forEach { free($0) } }
+        var pid: pid_t = 0
+        let spawned = posix_spawn(&pid, binary.path, nil, nil, args, vars)
+        guard spawned == 0 else { throw DeckError.message("Could not launch \(binary.lastPathComponent): \(String(cString: strerror(spawned)))") }
+        // The sign-in owns Ctrl-C while it runs; this process only waits for its result.
+        let previous = signal(SIGINT, SIG_IGN)
+        defer { signal(SIGINT, previous) }
+        var status: Int32 = 0
+        while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
+        return (status & 0x7f) == 0 ? (status >> 8) & 0xff : 128 + (status & 0x7f)
+    }
     public static func commandFile(cli: URL, arguments: [String], directory: URL, store: DiskStore) throws -> URL {
         let folder = store.paths.root.appendingPathComponent("launches")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])

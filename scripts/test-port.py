@@ -104,6 +104,40 @@ print(json.dumps({{'home':os.environ.get('CLAUDE_CONFIG_DIR'), 'secure':os.envir
         result = json.loads(self.cli('run', 'claude', '--', env=explicit).stdout)
         self.assertEqual(result['home'], explicit['CLAUDE_CONFIG_DIR']); self.assertTrue(result['key'])
 
+    def test_interactive_login_reads_the_terminal(self):
+        # Under a real terminal the provider's login must stay in the foreground process group;
+        # otherwise reading the keyboard stops it (SIGTTIN) and the sign-in hangs forever.
+        import pty, select, signal, time
+        agent = self.fake('actual claude', f'#!{PYTHON}\nimport sys\nprint("code?", flush=True)\nsys.exit(0 if sys.stdin.readline().strip() == "fixture-code" else 3)\n')
+        self.fake('mise', '#!/bin/sh\nif [ "$1 $2" = "which claude" ]; then\n  printf \'%s\\n\' ' + "'" + str(agent).replace("'", "'\"'\"'") + "'\nelse exit 1; fi\n")
+        account = self.add()
+        pid, fd = pty.fork()
+        if pid == 0:
+            os.execve(str(CLI), [str(CLI), 'account', 'login', 'claude', account['id']], self.env)
+        output, deadline, sent = b'', time.time() + 20, False
+        try:
+            while time.time() < deadline:
+                ready, _, _ = select.select([fd], [], [], 0.2)
+                if ready:
+                    try: chunk = os.read(fd, 4096)
+                    except OSError: break
+                    if not chunk: break
+                    output += chunk
+                if not sent and b'code?' in output:
+                    os.write(fd, b'fixture-code\n'); sent = True
+                done, status = os.waitpid(pid, os.WNOHANG)
+                if done: break
+            else:
+                os.kill(pid, signal.SIGKILL); os.waitpid(pid, 0)
+                self.fail('sign-in hung under a terminal: ' + output.decode(errors='replace'))
+            if not done: _, status = os.waitpid(pid, 0)
+        finally:
+            os.close(fd)
+        self.assertTrue(sent, output.decode(errors='replace'))
+        self.assertEqual(os.waitstatus_to_exitcode(status), 0, output.decode(errors='replace'))
+        registry = json.loads(self.cli('account', 'list', 'claude').stdout)
+        self.assertFalse(next(a for a in registry['accounts'] if a['id'] == account['id'])['pendingLogin'])
+
     def test_pending_login_and_wrapper_recursion_are_refused(self):
         self.fake_claude(); account = self.add()
         self.cli('account', 'use', 'claude', account['id'], ok=False)

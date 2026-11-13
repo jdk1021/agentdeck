@@ -159,9 +159,7 @@ struct AgentDeckCLI {
     }
     static func login(provider: Provider, env: [String: String], resolver: CLIResolver) throws {
         guard let name = provider.executable else { throw DeckError.message("Set this provider's key in the app's Keychain settings or log in through pi/omp/opencode") }
-        let process = Process(); process.executableURL = try resolver.find(name); process.arguments = provider.loginArguments
-        process.environment = env; process.standardInput = FileHandle.standardInput; process.standardOutput = FileHandle.standardOutput; process.standardError = FileHandle.standardError
-        try process.run(); process.waitUntilExit()
-        guard process.terminationStatus == 0 else { throw DeckError.message("Login did not complete. Existing credentials were preserved.") }
+        let status = try SessionLauncher.runInteractive(binary: resolver.find(name), arguments: provider.loginArguments, environment: env)
+        guard status == 0 else { throw DeckError.message("Login did not complete. Existing credentials were preserved.") }
     }
 }

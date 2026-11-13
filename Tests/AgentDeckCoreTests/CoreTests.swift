@@ -103,6 +103,32 @@ final class CoreTests: XCTestCase {
         let answer = try ChildProcess.run(URL(fileURLWithPath: "/bin/zsh"), ["-c", "print -r -- " + quoted])
         XCTAssertEqual(String(decoding: answer.stdout, as: UTF8.self), "a b'$(touch /tmp/not-executed)\n")
     }
+    func testBashInstallPreservesLoginProfilePrecedence() throws {
+        for name in [".bash_profile", ".bash_login", ".profile"] {
+            let root = try temp(), store = try DiskStore(paths: DeckPaths(root: root.appendingPathComponent("app"), home: root))
+            let profile = root.appendingPathComponent(name), original = "# existing login setup\nexport KEEP_ME=1\n"
+            try Data(original.utf8).write(to: profile)
+            let integration = ShellIntegration(store: store)
+            try integration.install(cli: root.appendingPathComponent("agentdeck"), shell: .bash)
+            try integration.install(cli: root.appendingPathComponent("agentdeck"), shell: .bash)
+            XCTAssertTrue(try String(contentsOf: profile).hasPrefix(original))
+            XCTAssertEqual(try String(contentsOf: profile).components(separatedBy: "# >>> AgentDeck").count, 2)
+            if name != ".bash_profile" { XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(".bash_profile").path)) }
+            if name == ".profile" {
+                XCTAssertEqual(try ChildProcess.run(URL(fileURLWithPath: "/bin/sh"), [profile.path]).status, 0)
+            }
+            try integration.uninstall(shell: .bash)
+            XCTAssertEqual(try String(contentsOf: profile), original)
+            XCTAssertEqual(try String(contentsOf: root.appendingPathComponent(".bashrc")), "")
+        }
+    }
+    func testUninstallMissingShellDoesNotCreateStartupFiles() throws {
+        let root = try temp(), store = try DiskStore(paths: DeckPaths(root: root.appendingPathComponent("app"), home: root))
+        let integration = ShellIntegration(store: store)
+        try integration.uninstall(shell: .bash)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(".bash_profile").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(".bashrc").path))
+    }
     func testLargeProcessOutputDoesNotDeadlock() throws {
         let r = try ChildProcess.run(URL(fileURLWithPath: "/bin/sh"), ["-c", "head -c 200000 /dev/zero; head -c 200000 /dev/zero >&2"], timeout: 10)
         XCTAssertEqual(r.stdout.count, 200000); XCTAssertEqual(r.stderr.count, 200000)

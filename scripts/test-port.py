@@ -5,6 +5,8 @@ import hashlib
 import importlib.util
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -171,6 +173,75 @@ print(json.dumps({{'home':os.environ.get('CLAUDE_CONFIG_DIR'), 'secure':os.envir
         self.cli('shell', 'install'); self.cli('shell', 'install')
         self.assertEqual(rc.read_text().count('# >>> AgentDeck'), 1)
         self.cli('shell', 'uninstall'); self.assertEqual(rc.read_text(), original)
+
+    def check_shell_routing(self, shell, binary):
+        self.fake_claude()
+        account = self.add()
+        self.cli('account', 'login', 'claude', account['id'])
+        config = self.home / "config with 'quotes' and $dollars \\ slash"
+        env = dict(self.env, XDG_CONFIG_HOME=str(config))
+        rc = config / 'fish/config.fish' if shell == 'fish' else self.home / ('.bashrc' if shell == 'bash' else '.zshrc')
+        rc.parent.mkdir(parents=True, exist_ok=True)
+        original = '# existing shell settings\n'
+        rc.write_text(original)
+        self.cli('shell', 'install', '--shell', shell, env=env)
+        self.cli('shell', 'install', '--shell', shell, env=env)
+        self.assertTrue(rc.read_text().startswith(original))
+        self.assertEqual(rc.read_text().count('# >>> AgentDeck'), 1)
+        # A CLI path with shell metacharacters must be treated as a literal path.
+        quoted_cli = self.bin / "deck 'quoted' $literal \\ path"
+        shutil.copy2(CLI, quoted_cli)
+        app = self.root / "app 'quoted' $literal \\ path"
+        shutil.copytree(Path(self.env['AGENTDECK_HOME']), app)
+        env['AGENTDECK_HOME'] = str(app)
+        subprocess.run([str(quoted_cli), 'shell', 'install', '--shell', shell], env=env, cwd=ROOT,
+                       check=True, capture_output=True, timeout=30)
+        expected = ['two words', '', "quote'and\"double", '$literal', '*']
+        quote = (lambda s: "'" + s.replace('\\', '\\\\').replace("'", "\\'") + "'") if shell == 'fish' else shlex.quote
+        command = 'source ' + quote(str(rc)) + '; claude ' + ' '.join(map(quote, expected))
+        def launch():
+            flags = ['--no-config', '-c'] if shell == 'fish' else ['-c']
+            result = subprocess.run([binary, *flags, command], env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            value = json.loads(result.stdout)
+            self.assertEqual(value['args'], expected)
+            return value
+        self.assertIsNone(launch()['home'])
+        self.cli('account', 'use', 'claude', account['id'], env=env)
+        value = launch()
+        self.assertEqual(value['home'], account['home'])
+        self.assertEqual(value['secure'], account['home'])
+        if shell == 'bash':
+            # Real login and interactive shells read different startup files.
+            for flag in ['-lc', '-ic']:
+                result = subprocess.run([binary, flag, 'export PATH=' + shlex.quote(env['PATH']) + '; claude'],
+                                        env=env, capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)['home'], account['home'])
+        self.cli('shell', 'uninstall', '--shell', shell, env=env)
+        self.assertEqual(rc.read_text(), original)
+
+    def test_bash_shell_routes_selected_account(self):
+        self.check_shell_routing('bash', '/bin/bash')
+
+    def test_zsh_shell_routes_selected_account(self):
+        self.check_shell_routing('zsh', '/bin/zsh')
+
+    def test_fish_shell_routes_selected_account(self):
+        binary = shutil.which('fish')
+        if not binary: self.skipTest('fish is not installed')
+        self.check_shell_routing('fish', binary)
+
+    def test_shell_rejects_invalid_options(self):
+        for args in [('install', '--shell', 'invalid'), ('install', '--shell'), ('install', '--typo', 'bash')]:
+            self.cli('shell', *args, ok=False)
+
+    def test_uninstall_removes_all_shell_integrations(self):
+        for shell in ['zsh', 'bash', 'fish']:
+            self.cli('shell', 'install', '--shell', shell)
+        self.cli('uninstall')
+        for name in ['.zshrc', '.bashrc', '.bash_profile', '.config/fish/config.fish']:
+            self.assertNotIn('# >>> AgentDeck', (self.home / name).read_text())
 
     def test_keychain_namespace_is_directory_scoped(self):
         spec = importlib.util.spec_from_file_location('mac_adapter', ROOT / 'scripts/agentdeck_macos.py')

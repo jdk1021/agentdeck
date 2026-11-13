@@ -36,7 +36,9 @@ jobs:
       - name: Swift tests (Command Line Tools adapter)
         run: python3 scripts/native-tests.py
       - name: CLI integration tests
-        run: python3 scripts/test-port.py
+        run: |
+          brew install fish
+          python3 scripts/test-port.py
       - name: Upstream collector fixtures
         run: |
           brew install bash

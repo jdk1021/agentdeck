@@ -26,8 +26,15 @@ The first launch still needs *Open Anyway* (see step 3 below).
 4. Optional CLI on your `PATH`:
    `ln -s /Applications/AgentDeck.app/Contents/MacOS/agentdeck ~/.local/bin/agentdeck`
    The CLI follows the link back to the app and uses its bundled runtime.
-5. Optional: *Launch at login* in Settings, and *Install zsh integration* (or `agentdeck shell install`)
-   so `claude`, `codex` and `grok` typed in zsh start with the selected account.
+5. Optional: *Launch at login* in Settings, then select your *Terminal shell* and *Install shell integration*
+   so `claude`, `codex` and `grok` start with the selected account. From the CLI, use
+   `agentdeck shell install --shell bash` (also supports `zsh`, the default, and `fish`). Open a new terminal
+   after installing. Install separately for each shell you use.
+
+   zsh updates `~/.zshrc`. bash updates `~/.bashrc` and the first existing login profile
+   (`~/.bash_profile`, `~/.bash_login`, then `~/.profile`), creating `~/.bash_profile` only if none exist.
+   fish updates `$XDG_CONFIG_HOME/fish/config.fish`, or `~/.config/fish/config.fish` by default.
+   Each file gets a marked block and a backup; other settings and mise installs are preserved.
 
 ## Build from source
 
@@ -54,13 +61,14 @@ Tests: see [validation.md](validation.md#how-to-run).
 | `…/AgentDeck/accounts/<provider>/<uuid>/` | homes of additional accounts (contain their sign-ins) |
 | `…/AgentDeck/usage/`, `…/cache/` | last collector records and collector caches |
 | `…/AgentDeck/providers/` | optional provider configuration (for example Copilot `monthlyCredits`) |
-| `…/AgentDeck/backups/` | `.zshrc` copies made before every change |
+| `…/AgentDeck/backups/` | shell startup file copies made before every change |
 | Keychain `org.agentdeck.provider-credentials` | API keys saved in AgentDeck's Settings |
 
 ## Uninstall
 
-1. `agentdeck uninstall` (or Settings → *Remove* zsh integration). Removes only the marked block in
-   `~/.zshrc`; a backup is saved first.
+1. `agentdeck uninstall` removes managed blocks for zsh, bash and fish; backups are saved first.
+   To remove one shell, use `agentdeck shell uninstall --shell bash` (or `zsh` / `fish`), or select the
+   shell in Settings and click *Remove*.
 2. Turn off *Launch at login*, quit AgentDeck, delete `AgentDeck.app` and any `agentdeck` symlink.
 
 Nothing else is removed: provider sign-ins, settings, histories, MCP configuration and databases stay
@@ -81,6 +89,6 @@ Only if you are sure you no longer need additional accounts:
 - `agentdeck restore settings` or `agentdeck restore <claude|codex|grok>` puts back the previous complete
   version of the settings file or an account registry (every write keeps one `.previous`).
 - `agentdeck account recover <provider> <id>` re-adds a removed account.
-- Earlier `.zshrc` versions are in `…/AgentDeck/backups/`.
+- Earlier shell startup file versions are in `…/AgentDeck/backups/`.
 - After `account sync-settings`, the account's previous `.claude.json`, `settings.json` or `config.toml`
   is next to it as `<name>.previous`.

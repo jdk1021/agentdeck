@@ -117,11 +117,27 @@ public enum SessionLauncher {
         while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
         return (status & 0x7f) == 0 ? (status >> 8) & 0xff : 128 + (status & 0x7f)
     }
-    public static func commandFile(cli: URL, arguments: [String], directory: URL, store: DiskStore) throws -> URL {
+    /// AppleScript that closes the Terminal window owning a given tty (passed as the first argument).
+    static let closeWindowScript = ["on run argv", "tell application \"Terminal\"", "repeat with w in windows",
+                                    "repeat with t in tabs of w", "if tty of t is item 1 of argv then close w",
+                                    "end repeat", "end repeat", "end tell", "end run"]
+
+    /// A Terminal `.command` file that runs the CLI and removes itself. With `closeOnSuccess`, the window
+    /// closes by itself once the command succeeds (for sign-ins); on failure it stays open so the error
+    /// can be read. The close runs detached, after the shell has exited, so Terminal never asks to
+    /// terminate a running process.
+    public static func commandFile(cli: URL, arguments: [String], directory: URL, store: DiskStore, closeOnSuccess: Bool = false) throws -> URL {
         let folder = store.paths.root.appendingPathComponent("launches")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let file = folder.appendingPathComponent(UUID().uuidString + ".command")
-        let script = "#!/bin/zsh\ncd \(ShellQuote.quote(directory.path)) || exit 1\n" + ([cli.path] + arguments).map(ShellQuote.quote).joined(separator: " ") + "\ndeck_status=$?\n/bin/rm -f -- \(ShellQuote.quote(file.path))\nexit $deck_status\n"
+        var script = "#!/bin/zsh\ndeck_tty=$(/usr/bin/tty)\ncd \(ShellQuote.quote(directory.path)) || exit 1\n"
+            + ([cli.path] + arguments).map(ShellQuote.quote).joined(separator: " ")
+            + "\ndeck_status=$?\n/bin/rm -f -- \(ShellQuote.quote(file.path))\n"
+        if closeOnSuccess {
+            let osa = closeWindowScript.map { "-e " + ShellQuote.quote($0) }.joined(separator: " ")
+            script += "if [ $deck_status -eq 0 ]; then\n  ( /bin/sleep 0.7; /usr/bin/osascript \(osa) \"$deck_tty\" ) >/dev/null 2>&1 &!\nfi\n"
+        }
+        script += "exit $deck_status\n"
         try Data(script.utf8).write(to: file, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: file.path)
         return file

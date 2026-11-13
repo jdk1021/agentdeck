@@ -121,7 +121,7 @@ struct AgentDeckCLI {
             try store.saveSettings(s)
         case "shell":
             let integration = ShellIntegration(store: store)
-            if try item(1) == "install" { try integration.install(cli: URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()) }
+            if try item(1) == "install" { try integration.install(cli: CurrentExecutable.url) }
             else if try item(1) == "uninstall" { try integration.uninstall() }
             else { throw DeckError.message(help) }
             print("Shell integration updated. Open a new zsh session. Backups are in AgentDeck/backups.")

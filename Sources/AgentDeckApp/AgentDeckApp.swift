@@ -69,6 +69,7 @@ final class DeckModel: ObservableObject {
     private(set) var accounts: AccountManager?
     private var timer: Task<Void, Never>?
     private var watchers: [DispatchSourceFileSystemObject] = []
+    private var keyObserver: NSObjectProtocol?
     private var lastFull = Date.distantPast
     let demo = DemoData.enabled
     init() {
@@ -81,6 +82,10 @@ final class DeckModel: ObservableObject {
             accounts = AccountManager(store: store, runtime: runtime)
             providers = try Provider.load(from: runtime.root)
             settings = try store.settings(); records = try store.records()
+            // Opening the menu bar panel or the dashboard checks right away (see refreshOnOpen).
+            keyObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshOnOpen() }
+            }
             watch(store.paths.accounts) { $0.reloadRegistries() }
             watch(store.paths.usage) { $0.reloadRecords() }
         } catch {
@@ -106,6 +111,13 @@ final class DeckModel: ObservableObject {
         source.setCancelHandler { close(fd) }
         source.resume()
         watchers.append(source)
+    }
+    /// A fresh check whenever the panel or dashboard is opened, unless one finished moments ago.
+    /// Collectors keep their own short reuse windows, so this never floods a provider's API.
+    func refreshOnOpen() {
+        guard !refreshing else { return }
+        if let last = lastRefresh, Date().timeIntervalSince(last) < 15 { return }
+        refresh()
     }
     func reloadRecords() {
         guard !refreshing, let store, let fresh = try? store.records() else { return }
@@ -167,7 +179,7 @@ final class DeckModel: ObservableObject {
             if let account { args += ["--account", account] }; args.append("--")
         }
         do {
-            let file = try SessionLauncher.commandFile(cli: cli, arguments: args, directory: store.paths.home, store: store)
+            let file = try SessionLauncher.commandFile(cli: cli, arguments: args, directory: store.paths.home, store: store, closeOnSuccess: login)
             let config = NSWorkspace.OpenConfiguration()
             NSWorkspace.shared.open([file], withApplicationAt: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"), configuration: config) { _, error in
                 if let error { Task { @MainActor in self.error = error.localizedDescription } }

@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AgentDeckCore
 
 // MARK: - Palette
 
@@ -163,7 +164,7 @@ struct ProviderStyle {
 /// their owners and are used only to identify each provider.
 enum ProviderArtwork {
     static let folder: URL? = {
-        let exe = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let exe = CurrentExecutable.url
         let candidates = [Bundle.main.resourceURL?.appendingPathComponent("ProviderIcons"),
                           exe.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Resources/ProviderIcons"),
                           URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Resources/ProviderIcons")]

@@ -7,6 +7,18 @@ public struct ProcessResult: Sendable {
     public let stderr: Data
 }
 
+/// This process's own executable, symlinks resolved. Asked from the kernel because argv[0] is just
+/// "agentdeck" when the CLI is started by name through a PATH link (Homebrew, ~/.local/bin).
+public enum CurrentExecutable {
+    public static var url: URL {
+        var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        if proc_pidpath(getpid(), &buffer, UInt32(buffer.count)) > 0 {
+            return URL(fileURLWithPath: String(cString: buffer)).resolvingSymlinksInPath()
+        }
+        return (Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])).resolvingSymlinksInPath()
+    }
+}
+
 public enum ChildProcess {
     /// Runs a helper in its own process group. On timeout, or when descendants outlive it while holding
     /// its output open, only that group is signalled — never the user's shells or agent sessions.
@@ -119,7 +131,7 @@ public struct CollectorRuntime: Sendable {
     public let python: URL
     public init(root: URL? = nil, resolver: CLIResolver = CLIResolver()) throws {
         let envRoot = ProcessInfo.processInfo.environment["AGENTDECK_RUNTIME"].map { URL(fileURLWithPath: $0) }
-        let exe = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let exe = CurrentExecutable.url
         let candidates = [root, envRoot, Bundle.main.resourceURL?.appendingPathComponent("Runtime"),
                           exe.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Resources/Runtime"),
                           URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Runtime")].compactMap { $0 }

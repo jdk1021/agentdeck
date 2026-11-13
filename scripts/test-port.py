@@ -138,6 +138,20 @@ print(json.dumps({{'home':os.environ.get('CLAUDE_CONFIG_DIR'), 'secure':os.envir
         registry = json.loads(self.cli('account', 'list', 'claude').stdout)
         self.assertFalse(next(a for a in registry['accounts'] if a['id'] == account['id'])['pendingLogin'])
 
+    def test_cli_started_by_name_through_a_path_link_finds_the_bundled_runtime(self):
+        # Homebrew links /opt/homebrew/bin/agentdeck into the app; argv[0] is then just "agentdeck".
+        contents = self.root / 'Fake.app/Contents'
+        (contents / 'MacOS').mkdir(parents=True); (contents / 'Resources').mkdir()
+        cli = contents / 'MacOS/agentdeck'
+        cli.write_bytes(CLI.read_bytes()); cli.chmod(0o755)
+        (contents / 'Resources/Runtime').symlink_to(ROOT / 'Runtime')
+        (self.bin / 'agentdeck').symlink_to(cli)
+        elsewhere = self.root / 'elsewhere'; elsewhere.mkdir()
+        env = {k: v for k, v in self.env.items() if k != 'AGENTDECK_RUNTIME'}
+        result = subprocess.run(['agentdeck', 'diagnostics'], env=env, cwd=elsewhere, capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(contents / 'Resources/Runtime'), result.stdout.replace('/private/var/', '/var/'))
+
     def test_pending_login_and_wrapper_recursion_are_refused(self):
         self.fake_claude(); account = self.add()
         self.cli('account', 'use', 'claude', account['id'], ok=False)

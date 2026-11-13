@@ -13,7 +13,7 @@
 
 ![AgentDeck on the macOS desktop](docs/images/hero.png)
 
-AgentDeck is a native SwiftUI menu bar app and `agentdeck` CLI for macOS 14+. It shows how much of each
+AgentDeck is a native SwiftUI menu bar app and `agentdeck` CLI for **Apple silicon Macs** on macOS 14+. It shows how much of each
 agent's quota you have used, when it resets, what prepaid balances remain, and what you did locally —
 and it lets you keep several Claude Code, Codex and Grok sign-ins side by side, switching manually or
 automatically before you hit a limit.
@@ -54,8 +54,11 @@ All screenshots use the app's built-in synthetic demo mode (`--demo`); no real a
 
 ## Install
 
-1. Download `AgentDeck-<version>-macos-<arch>.dmg` (or `.zip`) from
-   [Releases](../../releases) — `arm64` for Apple silicon. Check it against the `.sha256` file.
+> **Apple silicon only.** AgentDeck requires a Mac with Apple silicon (M1 or later) and macOS 14 or later.
+> Intel Macs are not supported.
+
+1. Download `AgentDeck-<version>-macos-arm64.dmg` (or `.zip`) from
+   [Releases](../../releases). Check it against the `.sha256` file.
 2. Drag **AgentDeck** to Applications.
 3. The app is **ad-hoc signed and not notarized** (no Apple Developer ID was available). On first launch
    macOS will refuse to open it: open **System Settings → Privacy & Security** and click **Open Anyway**

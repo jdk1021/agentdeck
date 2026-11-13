@@ -30,7 +30,7 @@ Command Line Tools). Anything not listed under "Verified" was **not** verified.
 - The Antigravity Keychain adapter against a real `agy` install.
 - Clicking through the real menu bar extra, Terminal launches, notifications, Launch at login,
   keyboard-only navigation and VoiceOver in the packaged app (UI was checked through demo windows).
-- `x86_64` builds and Intel Macs; `swift test` with XCTest (needs full Xcode — CI runs it).
+- `swift test` with XCTest locally (needs full Xcode; the arm64 CI job runs it and passed). Intel Macs are out of scope.
 - Notarization (no Developer ID available).
 
 ## How to run
@@ -48,7 +48,5 @@ python3 scripts/capture-screenshots.py dist/AgentDeck.app/Contents/MacOS/AgentDe
 
 Fixture port notes: Linux `/proc` stdin checks are replaced by `lsof`; one Cursor fixture tolerates the
 case-insensitive file system; GNU `date`/`timeout` helpers are provided for tests; `sed -i ''` syntax.
-No collector parsing assertion was removed. The x86_64 CPython build lacks `time.tzset`, which only seven fixture harnesses use to simulate
-time zones (no collector calls it); on that architecture those harness scripts run under the CI's own Python
-while the collector programs still use the bundled interpreter. The upstream update-service and Linux UI watcher suites are
+No collector parsing assertion was removed. The upstream update-service and Linux UI watcher suites are
 not run because those parts are replaced by the Swift app.

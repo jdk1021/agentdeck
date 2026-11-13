@@ -18,7 +18,9 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / 'dist'
 VERSION = re.search(r'current = "([^"]+)"', (ROOT / 'Sources/AgentDeckCore/Version.swift').read_text()).group(1)
-ARCH = 'arm64' if platform.machine() == 'arm64' else 'x86_64'
+ARCH = 'arm64'
+if platform.machine() != 'arm64':
+    sys.exit('AgentDeck supports Apple silicon (arm64) Macs only.')
 IDENTITY = os.environ.get('AGENTDECK_SIGN_IDENTITY', '-')
 BUNDLE_ID = 'org.agentdeck.AgentDeck'
 

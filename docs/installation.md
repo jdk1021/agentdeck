@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- macOS 14 or later. Release archives are built per architecture (`arm64`; `x86_64` when CI publishes it).
+- A Mac with Apple silicon (M1 or later) and macOS 14 or later. Intel Macs are not supported.
 - The agent CLIs you want to use, installed your usual way (mise, Homebrew, npm, vendor installer).
   AgentDeck never installs them.
 

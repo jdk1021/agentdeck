@@ -39,8 +39,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## CPython 3.14.10 (PSF License Agreement and bundled-library licenses)
 
-- Distribution: python-build-standalone release `20261110`, `install_only_stripped` builds for
-  `aarch64-apple-darwin` and `x86_64-apple-darwin`. URLs and pinned SHA-256 digests: `scripts/dependencies.json`.
+- Distribution: python-build-standalone release `20261110`, `install_only_stripped` build for
+  `aarch64-apple-darwin`. URLs and pinned SHA-256 digests: `scripts/dependencies.json`.
 - License: the Python Software Foundation License Version 2 and the licenses of the libraries
   CPython incorporates (OpenSSL, SQLite, zlib, libffi, expat, mpdecimal, xz, bzip2, zstd and others) are in
   `Licenses/PYTHON-LICENSE.txt` (the distribution's own `lib/python3.14/LICENSE.txt`).
@@ -48,7 +48,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## ripgrep 15.2.0 (MIT or Unlicense)
 
-- Distribution: official release archives for `aarch64-apple-darwin` and `x86_64-apple-darwin`,
+- Distribution: official release archive for `aarch64-apple-darwin`,
   pinned in `scripts/dependencies.json`.
 - License: dual MIT / Unlicense; texts in `Licenses/RIPGREP-LICENSE-MIT`, `Licenses/RIPGREP-UNLICENSE`
   and `Licenses/RIPGREP-COPYING`.

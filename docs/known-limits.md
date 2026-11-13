@@ -24,4 +24,4 @@
 - **Cross-device aggregation** relies on a folder you sync yourself (iCloud Drive, Dropbox, …).
   Lifetime totals take the largest value across devices, because histories can be shared; daily values
   are summed.
-- **Architectures.** Only `arm64` was built and tested locally. `x86_64` is built by CI when available.
+- **Apple silicon only.** Intel Macs are not supported; release archives are `arm64` only.

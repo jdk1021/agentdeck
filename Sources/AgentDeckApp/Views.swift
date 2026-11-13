@@ -645,6 +645,7 @@ struct SettingsPanel: View {
     @State private var secret = ""
     @State private var loginAtLaunch = SMAppService.mainApp.status == .enabled
     @State private var message = ""
+    @State private var integrationShell: IntegrationShell = .zsh
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -660,13 +661,16 @@ struct SettingsPanel: View {
                         model.perform { if value { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
                         loginAtLaunch = SMAppService.mainApp.status == .enabled
                     }
+                    Picker("Terminal shell", selection: $integrationShell) {
+                        ForEach(IntegrationShell.allCases) { shell in Text(shell.rawValue).tag(shell) }
+                    }
                     HStack {
-                        Button("Install zsh integration") { model.perform { if let store = model.store { try ShellIntegration(store: store).install(cli: model.cli) } } }
+                        Button("Install shell integration") { model.perform { if let store = model.store { try ShellIntegration(store: store).install(cli: model.cli, shell: integrationShell) } } }
                             .buttonStyle(DeckButtonStyle(kind: .secondary))
-                        Button("Remove") { model.perform { if let store = model.store { try ShellIntegration(store: store).uninstall() } } }
+                        Button("Remove") { model.perform { if let store = model.store { try ShellIntegration(store: store).uninstall(shell: integrationShell) } } }
                             .buttonStyle(DeckButtonStyle(kind: .plain))
                     }
-                    note("Adds a marked block to ~/.zshrc (backup saved) so claude, codex and grok start with the selected account. Existing mise installs are used as they are.")
+                    note("Connects zsh, bash or fish to the selected account for new claude, codex and grok sessions. Shell startup files are backed up before changes. Open a new terminal after installing.")
                 }
                 section("Provider keys · macOS Keychain") {
                     Picker("Provider", selection: $keyProvider) {

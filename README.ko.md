@@ -80,7 +80,8 @@ agentdeck account login claude <id>      # 해당 계정 홈에서 제공자 자
 agentdeck account use claude <id|next>   # 새 세션부터 적용, 실행 중 세션은 그대로
 agentdeck account mode claude auto 95    # 95%에서 자동 전환
 agentdeck run claude -- --continue       # 선택한 계정으로 실행
-agentdeck shell install                  # 선택: zsh의 claude/codex/grok이 선택 계정을 따름
+agentdeck shell install --shell bash     # 선택: claude/codex/grok이 선택 계정을 따름
+# --shell zsh(기본값), --shell fish도 지원
 ```
 
 전체 명령은 `agentdeck help`를 참고하세요.

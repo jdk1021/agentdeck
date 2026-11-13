@@ -44,24 +44,65 @@ public enum ProviderSecrets {
     }
 }
 
+public enum IntegrationShell: String, CaseIterable, Identifiable {
+    case zsh, bash, fish
+    public var id: String { rawValue }
+    public func quote(_ value: String) -> String {
+        if self == .fish {
+            return "'" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'") + "'"
+        }
+        return ShellQuote.quote(value)
+    }
+}
+
 public struct ShellIntegration {
     public let store: DiskStore
     public init(store: DiskStore) { self.store = store }
     private let start = "# >>> AgentDeck managed integration >>>"
     private let end = "# <<< AgentDeck managed integration <<<"
-    public var shellFile: URL { store.paths.root.appendingPathComponent("shell.zsh") }
-    public func install(cli: URL, rcFile: URL? = nil) throws {
-        let rc = (rcFile ?? store.paths.home.appendingPathComponent(".zshrc")).resolvingSymlinksInPath()
+    public var shellFile: URL { shellFile(for: .zsh) }
+    public func shellFile(for shell: IntegrationShell) -> URL { store.paths.root.appendingPathComponent("shell.\(shell.rawValue)") }
+    private func rcFiles(for shell: IntegrationShell, removing: Bool = false) -> [URL] {
+        let home = store.paths.home
+        switch shell {
+        case .zsh: return [home.appendingPathComponent(".zshrc")]
+        case .bash:
+            let profiles = [".bash_profile", ".bash_login", ".profile"].map { home.appendingPathComponent($0) }
+            // Bash reads only the first existing login profile. Keep that choice intact.
+            let login = profiles.first { FileManager.default.fileExists(atPath: $0.path) } ?? profiles[0]
+            return [home.appendingPathComponent(".bashrc")] + (removing ? profiles : [login])
+        case .fish:
+            let config = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"].flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
+                ?? home.appendingPathComponent(".config")
+            return [config.appendingPathComponent("fish/config.fish")]
+        }
+    }
+    public func install(cli: URL, shell: IntegrationShell = .zsh, rcFile: URL? = nil) throws {
         var lines = ["# AGENTDECK_WRAPPER: reversible shell functions; binaries and mise shims are unchanged."]
         for provider in ["claude", "codex", "grok"] {
-            lines.append("function \(provider)() { command \(ShellQuote.quote(cli.path)) run \(provider) -- \"$@\"; }")
+            if shell == .fish {
+                lines.append("function \(provider)\n    command \(shell.quote(cli.path)) run \(provider) -- $argv\nend")
+            } else {
+                lines.append("function \(provider)() { command \(shell.quote(cli.path)) run \(provider) -- \"$@\"; }")
+            }
         }
-        lines.append("function agentdeck() { command \(ShellQuote.quote(cli.path)) \"$@\"; }")
-        try Data((lines.joined(separator: "\n") + "\n").utf8).write(to: shellFile, options: .atomic)
-        try edit(rc: rc, install: true)
+        if shell == .fish {
+            lines.append("function agentdeck\n    command \(shell.quote(cli.path)) $argv\nend")
+        } else {
+            lines.append("function agentdeck() { command \(shell.quote(cli.path)) \"$@\"; }")
+        }
+        try Data((lines.joined(separator: "\n") + "\n").utf8).write(to: shellFile(for: shell), options: .atomic)
+        for rc in rcFile.map({ [$0] }) ?? rcFiles(for: shell) {
+            try edit(rc: rc.resolvingSymlinksInPath(), shell: shell, install: true)
+        }
     }
-    public func uninstall(rcFile: URL? = nil) throws { try edit(rc: (rcFile ?? store.paths.home.appendingPathComponent(".zshrc")).resolvingSymlinksInPath(), install: false) }
-    private func edit(rc: URL, install: Bool) throws {
+    public func uninstall(shell: IntegrationShell = .zsh, rcFile: URL? = nil) throws {
+        for rc in rcFile.map({ [$0] }) ?? rcFiles(for: shell, removing: true) where FileManager.default.fileExists(atPath: rc.path) {
+            try edit(rc: rc.resolvingSymlinksInPath(), shell: shell, install: false)
+        }
+    }
+    private func edit(rc: URL, shell: IntegrationShell, install: Bool) throws {
+        if install { try FileManager.default.createDirectory(at: rc.deletingLastPathComponent(), withIntermediateDirectories: true) }
         try store.locked(rc) {
             let text = try FileManager.default.fileExists(atPath: rc.path) ? String(contentsOf: rc, encoding: .utf8) : ""
             let mode = (try? FileManager.default.attributesOfItem(atPath: rc.path)[.posixPermissions] as? Int) ?? 0o600
@@ -74,12 +115,16 @@ public struct ShellIntegration {
             }
             if install {
                 if !new.isEmpty && !new.hasSuffix("\n") { new += "\n" }
-                new += "\(start)\nsource \(ShellQuote.quote(shellFile.path))\n\(end)\n"
+                let source = "source \(shell.quote(shellFile(for: shell).path))"
+                // .profile can also be read by POSIX sh and other shells.
+                let block = shell == .bash
+                    ? "if [ -n \"${BASH_VERSION:-}\" ]; then\n    \(source)\nfi" : source
+                new += "\(start)\n\(block)\n\(end)\n"
             }
             if text == new { return }
             let backups = store.paths.root.appendingPathComponent("backups")
             try FileManager.default.createDirectory(at: backups, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-            let backup = backups.appendingPathComponent("zshrc-\(UUID().uuidString).txt")
+            let backup = backups.appendingPathComponent("\(rc.lastPathComponent)-\(UUID().uuidString).txt")
             try Data(text.utf8).write(to: backup, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: backup.path)
             try Data(new.utf8).write(to: rc, options: .atomic)

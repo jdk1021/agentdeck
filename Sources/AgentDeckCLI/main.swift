@@ -24,7 +24,7 @@ struct AgentDeckCLI {
     agentdeck login <provider>
     agentdeck run <provider> [--account <id>] -- [CLI arguments ...]
     agentdeck settings [refresh <seconds>|sync <directory|off>]
-    agentdeck shell install|uninstall
+    agentdeck shell install|uninstall [--shell zsh|bash|fish]
     agentdeck diagnostics
     agentdeck restore <settings|claude|codex|grok>
     agentdeck sync
@@ -121,10 +121,14 @@ struct AgentDeckCLI {
             try store.saveSettings(s)
         case "shell":
             let integration = ShellIntegration(store: store)
-            if try item(1) == "install" { try integration.install(cli: CurrentExecutable.url) }
-            else if try item(1) == "uninstall" { try integration.uninstall() }
+            let shell: IntegrationShell
+            if args.count == 2 { shell = .zsh }
+            else if args.count == 4, args[2] == "--shell", let selected = IntegrationShell(rawValue: args[3]) { shell = selected }
+            else { throw DeckError.message("Expected shell install|uninstall [--shell zsh|bash|fish]") }
+            if try item(1) == "install" { try integration.install(cli: CurrentExecutable.url, shell: shell) }
+            else if try item(1) == "uninstall" { try integration.uninstall(shell: shell) }
             else { throw DeckError.message(help) }
-            print("Shell integration updated. Open a new zsh session. Backups are in AgentDeck/backups.")
+            print("Shell integration updated. Open a new \(shell.rawValue) session. Backups are in AgentDeck/backups.")
         case "diagnostics":
             print("AgentDeck \(AgentDeckVersion.current) • macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
             print("Runtime: \(runtime.root.path)\nPython: \(runtime.python.path)\nCollectors: \(providers.count)")
@@ -152,7 +156,7 @@ struct AgentDeckCLI {
                 try await Task.sleep(for: .seconds(step.seconds))
             }
         case "uninstall":
-            try ShellIntegration(store: store).uninstall()
+            for shell in IntegrationShell.allCases { try ShellIntegration(store: store).uninstall(shell: shell) }
             print("Shell integration removed. Disable Launch at Login in the app, quit it, then delete AgentDeck.app. App state and all agent data are retained. See docs/installation.md for optional cleanup.")
         default: throw DeckError.message(help)
         }

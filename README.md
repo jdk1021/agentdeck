@@ -84,7 +84,8 @@ agentdeck account login claude <id>      # opens the provider's own sign-in in t
 agentdeck account use claude <id|next>   # new sessions use it; running ones are untouched
 agentdeck account mode claude auto 95    # automatic switching at 95%
 agentdeck run claude -- --continue       # launch with the selected account
-agentdeck shell install                  # optional: claude/codex/grok in zsh follow the selection
+agentdeck shell install --shell bash     # optional: claude/codex/grok follow the selection
+# --shell zsh (default) and --shell fish are also supported
 ```
 
 Run `agentdeck help` for every command.

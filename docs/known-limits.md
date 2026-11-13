@@ -9,9 +9,10 @@
 - **Sign-in lifetimes.** Claude Code's access token lasts hours; only the CLI refreshes it. If nothing
   runs Claude Code for a while, limits pause ("Limits paused") until it runs again. AgentDeck never refreshes
   or rewrites tokens.
-- **Switching affects new sessions only.** A running agent keeps its account until it exits. zsh
-  integration only covers `claude`, `codex` and `grok` started from zsh; other shells and IDE extensions
-  use whatever environment they are launched with.
+- **Switching affects new sessions only.** A running agent keeps its account until it exits. Install
+  integration for each shell you use (`agentdeck shell install --shell zsh|bash|fish`) so `claude`,
+  `codex` and `grok` use the selected account. Other shells and IDE extensions use whatever environment
+  they are launched with. An explicit provider home environment variable overrides the selection.
 - **Settings of additional accounts are snapshots.** Use *Copy settings from primary again*
   (`agentdeck account sync-settings`) after changing MCP servers, hooks or plugins on the primary.
 - **Estimates.** Copilot's local allowance, Fireworks' configured funding and DeepSeek's funded amount are

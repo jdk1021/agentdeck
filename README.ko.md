@@ -3,7 +3,7 @@
 <h1 align="center">AgentDeck</h1>
 
 <p align="center"><b>AI 코딩 에이전트의 한도·잔액·계정을 Mac 메뉴 막대 한곳에서.</b><br>
-<a href="README.md">English</a></p>
+<a href="https://jdk1021.github.io/agentdeck/">웹사이트</a> · <a href="README.md">English</a></p>
 
 > **[Omarchy](https://github.com/omacom/omarchy)의 소스코드를 바탕으로 만들었습니다.** AgentDeck의
 > 23개 사용량 수집기는 Omarchy(MIT, David Heinemeier Hansson과 Omarchy 기여자들)의 에이전트 사용량
@@ -53,15 +53,22 @@ AgentDeck은 macOS 14 이상의 **Apple silicon Mac** 전용 네이티브 SwiftU
 
 > **Apple silicon 전용입니다.** Apple silicon(M1 이상) Mac과 macOS 14 이상이 필요하며, Intel Mac은 지원하지 않습니다.
 
+```sh
+brew install --cask jdk1021/tap/agentdeck
+```
+
+또는 직접 설치:
+
 1. [Releases](../../releases)에서 `AgentDeck-<버전>-macos-arm64.dmg`(또는 `.zip`)를 내려받고
    `.sha256` 파일로 무결성을 확인합니다.
 2. **AgentDeck**을 응용 프로그램 폴더로 옮깁니다.
 3. 이 앱은 **ad-hoc 서명이며 Apple 공증을 받지 않았습니다**(Developer ID 없음). 처음 실행하면 macOS가
    차단합니다. **시스템 설정 → 개인정보 보호 및 보안**에서 AgentDeck의 **그래도 열기**를 누르거나,
    앱을 Control-클릭 → 열기를 선택하세요. Gatekeeper 전체를 끄지 마십시오.
-4. CLI(선택): `ln -s /Applications/AgentDeck.app/Contents/MacOS/agentdeck ~/.local/bin/agentdeck`
+4. CLI(선택, Homebrew는 자동 연결): `ln -s /Applications/AgentDeck.app/Contents/MacOS/agentdeck ~/.local/bin/agentdeck`
 
-소스 빌드: [docs/installation.md](docs/installation.md)
+소스 빌드: [docs/installation.md](docs/installation.md). 릴리스·원본 업데이트·의존성 업데이트 자동화:
+[docs/automation.md](docs/automation.md)
 
 ## 빠른 시작
 

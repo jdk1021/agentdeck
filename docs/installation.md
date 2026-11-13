@@ -6,6 +6,15 @@
 - The agent CLIs you want to use, installed your usual way (mise, Homebrew, npm, vendor installer).
   AgentDeck never installs them.
 
+## Install with Homebrew
+
+```sh
+brew install --cask jdk1021/tap/agentdeck   # also links the agentdeck CLI
+brew upgrade --cask agentdeck
+```
+
+The first launch still needs *Open Anyway* (see step 3 below).
+
 ## Install a release
 
 1. Download the `.dmg` or `.zip` and verify it: `shasum -a 256 -c AgentDeck-<version>-macos-<arch>.sha256`

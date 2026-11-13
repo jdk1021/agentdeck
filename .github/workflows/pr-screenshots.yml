@@ -1,0 +1,83 @@
+name: PR screenshots
+
+# For pull requests that touch the app's UI: build, capture the synthetic demo screens on Apple silicon,
+# store them on the `pr-screenshots` branch and keep one comment on the PR up to date with the images.
+on:
+  pull_request:
+    paths: ['Sources/AgentDeckApp/**', 'Resources/**', 'scripts/capture-screenshots.py', '.github/workflows/pr-screenshots.yml']
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pr-screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    # Forks get a read-only token; their screenshots stay in the run's artifacts.
+    runs-on: macos-15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Build with the runtime
+        run: |
+          python3 scripts/bootstrap-runtime.py
+          python3 scripts/prepare-runtime.py
+          swift build
+      - name: Capture demo screens
+        run: AGENTDECK_SCREENSHOT_DIR="$RUNNER_TEMP/shots" python3 scripts/capture-screenshots.py .build/debug/AgentDeckApp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-pr-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/shots/*.png
+      - name: Publish to the pr-screenshots branch and comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          short=${SHA:0:7}
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          store="$RUNNER_TEMP/store"
+          if git ls-remote --exit-code --heads origin pr-screenshots >/dev/null; then
+            git clone --quiet --depth 1 --branch pr-screenshots "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$store"
+          else
+            git init --quiet -b pr-screenshots "$store"
+            git -C "$store" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            printf 'Screenshots captured for pull requests by the PR screenshots workflow. Not part of the source tree.\n' > "$store/README.md"
+          fi
+          rm -rf "$store/pr-$PR"; mkdir -p "$store/pr-$PR/$short"
+          cp "$RUNNER_TEMP"/shots/*.png "$store/pr-$PR/$short/"
+          git -C "$store" add -A
+          git -C "$store" commit --quiet -m "Screenshots for #$PR at $short"
+          git -C "$store" push --quiet origin pr-screenshots
+          rev=$(git -C "$store" rev-parse HEAD)
+          base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$rev/pr-$PR/$short"
+          body="<!-- agentdeck-pr-screenshots -->
+          ### Demo screens at ${short}
+
+          Synthetic demo data, captured on Apple silicon (macOS 15 runner).
+
+          | Panel | Panel (dark) |
+          |---|---|
+          | <img src=\"$base/panel-light.png\" width=\"360\"> | <img src=\"$base/panel-dark.png\" width=\"360\"> |
+
+          | Dashboard | Dashboard (dark) |
+          |---|---|
+          | <img src=\"$base/dashboard-light.png\"> | <img src=\"$base/dashboard-dark.png\"> |
+
+          | Accounts | Balance | Settings |
+          |---|---|---|
+          | <img src=\"$base/accounts.png\"> | <img src=\"$base/balance.png\"> | <img src=\"$base/settings.png\"> |"
+          existing=$(gh api "repos/${GITHUB_REPOSITORY}/issues/$PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- agentdeck-pr-screenshots -->")) | .id' | head -1)
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/$existing" -f body="$body" >/dev/null
+          else
+            gh pr comment "$PR" --body "$body"
+          fi

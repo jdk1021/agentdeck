@@ -1,0 +1,87 @@
+name: Dependency watch
+
+# Weekly: newer CPython 3.14 / ripgrep builds for Apple silicon. Verifies the download against GitHub's
+# published digest, rebuilds and tests the app with it, and opens a pull request with the results.
+on:
+  schedule:
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: dependency-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: macos-15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Check pins
+        id: check
+        run: |
+          set +e
+          python3 scripts/check-dependencies.py; code=$?
+          set -e
+          if [ "$code" -ne 10 ]; then echo "run=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          python3 scripts/check-dependencies.py --update
+          branch="deps/$(shasum -a 256 scripts/dependencies.json | cut -c1-10)"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then echo "run=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "run=true" >> "$GITHUB_OUTPUT"; echo "branch=$branch" >> "$GITHUB_OUTPUT"
+      - name: Rebuild and test with the new runtime
+        if: steps.check.outputs.run == 'true'
+        id: tests
+        run: |
+          mkdir -p artifacts
+          check() { name=$1; shift; if "$@" > "artifacts/$name.log" 2>&1; then r=pass; else r="**fail**"; fi; echo "$name=$r" >> "$GITHUB_OUTPUT"; }
+          check bootstrap python3 scripts/bootstrap-runtime.py
+          check prepare python3 scripts/prepare-runtime.py
+          check build swift build
+          check native python3 scripts/native-tests.py
+          check cli python3 scripts/test-port.py
+          brew install bash
+          check fixtures python3 scripts/test-collectors.py --bash "$(brew --prefix)/bin/bash"
+          check package python3 scripts/package-app.py --skip-runtime
+          check audit python3 scripts/audit.py --dist
+      - name: Open pull request
+        if: steps.check.outputs.run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${{ steps.check.outputs.branch }}"
+          git add scripts/dependencies.json THIRD_PARTY_NOTICES.md
+          git commit -m "Update pinned runtime dependencies"
+          git push origin "${{ steps.check.outputs.branch }}"
+          results="${{ steps.tests.outputs.bootstrap }}${{ steps.tests.outputs.prepare }}${{ steps.tests.outputs.build }}${{ steps.tests.outputs.native }}${{ steps.tests.outputs.cli }}${{ steps.tests.outputs.fixtures }}${{ steps.tests.outputs.package }}${{ steps.tests.outputs.audit }}"
+          draft=""; case "$results" in *fail*) draft="--draft";; esac
+          gh pr create $draft --base main --head "${{ steps.check.outputs.branch }}" \
+            --title "Update pinned runtime dependencies" \
+            --body "Newer Apple silicon builds of the bundled runtime. Each download matched GitHub's published SHA-256.
+
+          \`\`\`diff
+          $(git diff HEAD~1 -- scripts/dependencies.json | grep -E '^[+-] ' )
+          \`\`\`
+
+          | Check | Result |
+          |---|---|
+          | Runtime bootstrap | ${{ steps.tests.outputs.bootstrap }} |
+          | Collector payload | ${{ steps.tests.outputs.prepare }} |
+          | Swift build | ${{ steps.tests.outputs.build }} |
+          | Swift core tests | ${{ steps.tests.outputs.native }} |
+          | CLI integration tests | ${{ steps.tests.outputs.cli }} |
+          | Upstream fixtures | ${{ steps.tests.outputs.fixtures }} |
+          | Package | ${{ steps.tests.outputs.package }} |
+          | Release audit | ${{ steps.tests.outputs.audit }} |"
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.run == 'true'
+        with:
+          name: dependency-watch-logs
+          path: artifacts/

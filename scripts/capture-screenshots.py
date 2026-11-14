@@ -33,7 +33,7 @@ SHOTS = [
     ('dashboard-dark', ['--demo-appearance', 'dark'], 'AgentDeck'),
     ('accounts', ['--demo-appearance', 'light', '--demo-select', 'codex', '--demo-scroll', 'accounts'], 'AgentDeck'),
     ('grok', ['--demo-appearance', 'light', '--demo-select', 'grok'], 'AgentDeck'),
-    ('balance', ['--demo-appearance', 'light', '--demo-select', 'openrouter'], 'AgentDeck'),
+    ('openrouter-balance', ['--demo-appearance', 'light', '--demo-select', 'openrouter'], 'AgentDeck'),
     ('panel-light', ['--demo-appearance', 'light', '--panel-preview'], 'AgentDeck Panel'),
     ('panel-dark', ['--demo-appearance', 'dark', '--panel-preview'], 'AgentDeck Panel'),
     ('settings', ['--demo-appearance', 'light', '--demo-settings'], 'settings'),

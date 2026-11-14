@@ -48,7 +48,7 @@ automatically before you hit a limit.
 
 | Dashboard, dark | OpenRouter balance | Settings |
 |---|---|---|
-| ![Dashboard dark](docs/images/dashboard-dark.png) | ![OpenRouter balance](docs/images/balance.png) | ![Settings](docs/images/settings.png) |
+| ![Dashboard dark](docs/images/dashboard-dark.png) | ![OpenRouter balance](docs/images/openrouter-balance.png) | ![Settings](docs/images/settings.png) |
 
 All screenshots use the app's built-in synthetic demo mode (`--demo`); no real account data is shown.
 

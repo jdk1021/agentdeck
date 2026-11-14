@@ -98,7 +98,7 @@ print(json.dumps({{'home':os.environ.get('CLAUDE_CONFIG_DIR'), 'secure':os.envir
                      if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'SHOTS' for t in node.targets))
         selections = {name: args[args.index('--demo-select') + 1] for name, args, _ in shots if '--demo-select' in args}
         self.assertEqual(selections['grok'], 'grok')
-        self.assertEqual(selections['balance'], 'openrouter')
+        self.assertEqual(selections['openrouter-balance'], 'openrouter')
         self.assertNotIn('deepseek', selections.values())
 
     def test_existing_claude_settings_hooks_and_transcripts_preserved(self):

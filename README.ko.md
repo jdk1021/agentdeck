@@ -45,7 +45,7 @@ AgentDeck은 macOS 14 이상의 **Apple silicon Mac** 전용 네이티브 SwiftU
 
 | 대시보드(다크) | OpenRouter 잔액 | 설정 |
 |---|---|---|
-| ![대시보드 다크](docs/images/dashboard-dark.png) | ![OpenRouter 잔액](docs/images/balance.png) | ![설정](docs/images/settings.png) |
+| ![대시보드 다크](docs/images/dashboard-dark.png) | ![OpenRouter 잔액](docs/images/openrouter-balance.png) | ![설정](docs/images/settings.png) |
 
 모든 화면은 앱 내장 synthetic 데모 모드(`--demo`)로 캡처했으며 실제 계정 데이터는 없습니다.
 

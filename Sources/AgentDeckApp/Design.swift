@@ -131,6 +131,27 @@ struct IconButton: View {
     }
 }
 
+struct RefreshButton: View {
+    let refreshing: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Image(systemName: "arrow.clockwise").opacity(refreshing ? 0 : 1)
+                if refreshing {
+                    ProgressView().controlSize(.small).accessibilityHidden(true)
+                }
+            }
+            .frame(width: 18, height: 18)
+        }
+        .disabled(refreshing)
+        .help(refreshing ? "Refreshing providers…" : "Refresh all providers")
+        .accessibilityLabel("Refresh all providers")
+        .accessibilityValue(refreshing ? "Refreshing" : "Ready")
+    }
+}
+
 struct Banner: View {
     enum Tone { case info, warning, danger }
     let tone: Tone
@@ -205,12 +226,41 @@ struct ProviderIcon: View {
     }
 }
 
-// MARK: - Menu bar glyph (template image so it follows the menu bar appearance)
+// MARK: - Menu bar status
+
+enum DeckMenuStatus {
+    case normal, warning, critical, stale
+
+    var description: String {
+        switch self {
+        case .normal: return "Usage within limits"
+        case .warning: return "Approaching a usage limit"
+        case .critical: return "Usage limit nearly reached"
+        case .stale: return "Previous usage data; refresh pending"
+        }
+    }
+
+    var image: NSImage {
+        switch self {
+        case .normal: return DeckGlyph.image
+        case .warning: return DeckGlyph.warning
+        case .critical: return DeckGlyph.critical
+        case .stale: return NSImage(systemSymbolName: "exclamationmark.circle", accessibilityDescription: description)!
+        }
+    }
+}
+
+// Normal status follows the menu bar appearance; alerts carry their own color.
 
 enum DeckGlyph {
-    static let image: NSImage = {
+    static let image = makeImage()
+    static let warning = makeImage(color: .systemOrange)
+    static let critical = makeImage(color: .systemRed)
+
+    private static func makeImage(color: NSColor? = nil) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 16), flipped: false) { _ in
-            NSColor.black.setStroke(); NSColor.black.setFill()
+            let ink = color ?? .black
+            ink.setStroke(); ink.setFill()
             let back = NSBezierPath(roundedRect: NSRect(x: 5.5, y: 6.5, width: 11, height: 8), xRadius: 2, yRadius: 2)
             back.lineWidth = 1.4; back.stroke()
             let front = NSBezierPath(roundedRect: NSRect(x: 1.5, y: 1.5, width: 11, height: 9), xRadius: 2.2, yRadius: 2.2)
@@ -222,8 +272,8 @@ enum DeckGlyph {
             bar2.fill()
             return true
         }
-        image.isTemplate = true
+        image.isTemplate = color == nil
         image.accessibilityDescription = "AgentDeck"
         return image
-    }()
+    }
 }

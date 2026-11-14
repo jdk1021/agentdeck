@@ -72,9 +72,12 @@ jobs:
           |---|---|
           | <img src=\"$base/dashboard-light.png\"> | <img src=\"$base/dashboard-dark.png\"> |
 
-          | Accounts | Balance | Settings |
+          | Claude Code | Codex accounts | Grok |
           |---|---|---|
-          | <img src=\"$base/accounts.png\"> | <img src=\"$base/balance.png\"> | <img src=\"$base/settings.png\"> |"
+          | <img src=\"$base/dashboard-light.png\"> | <img src=\"$base/accounts.png\"> | <img src=\"$base/grok.png\"> |
+          | OpenRouter balance | Settings |
+          |---|---|
+          | <img src=\"$base/balance.png\"> | <img src=\"$base/settings.png\"> |"
           existing=$(gh api "repos/${GITHUB_REPOSITORY}/issues/$PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- agentdeck-pr-screenshots -->")) | .id' | head -1)
           if [ -n "$existing" ]; then
             gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/$existing" -f body="$body" >/dev/null

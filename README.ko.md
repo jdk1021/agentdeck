@@ -19,8 +19,8 @@ AgentDeck은 macOS 14 이상의 **Apple silicon Mac** 전용 네이티브 SwiftU
 
 ## 주요 기능
 
-- **23개 제공자를 한눈에.** Claude Code, Codex, Grok, Cursor, GitHub Copilot, Antigravity, Kimi,
-  DeepSeek, OpenRouter, Fireworks 등. 한도·잔액·로컬 통계를 구분해 표시하며, 제공자가 알려 주지 않는
+- **23개 제공자를 한눈에.** Claude Code, Codex, Grok, Cursor, GitHub Copilot, Antigravity,
+  OpenRouter, Fireworks 등. 한도·잔액·로컬 통계를 구분해 표시하며, 제공자가 알려 주지 않는
   한도를 만들어 내지 않습니다.
 - **서로 간섭하지 않는 다중 계정.** 추가한 Claude Code / Codex / Grok 계정마다 별도 홈과 Keychain
   이름공간을 씁니다. MCP 서버·훅·플러그인·스킬·기록은 기존 설정과 공유하고, 인증 정보는 절대 공유하지
@@ -35,17 +35,17 @@ AgentDeck은 macOS 14 이상의 **Apple silicon Mac** 전용 네이티브 SwiftU
 
 ## 화면
 
+| Claude Code | Codex 계정 | Grok |
+|---|---|---|
+| ![Claude Code](docs/images/dashboard-light.png) | ![Codex 계정](docs/images/accounts.png) | ![Grok](docs/images/grok.png) |
+
 | 메뉴 막대 패널 | 다크 모드 |
 |---|---|
 | ![메뉴 막대 패널](docs/images/panel-light.png) | ![다크 모드 패널](docs/images/panel-dark.png) |
 
-| 계정과 자동 전환 | 선불 잔액(추정치는 명확히 표시) |
-|---|---|
-| ![계정](docs/images/accounts.png) | ![잔액](docs/images/balance.png) |
-
-| 대시보드(다크) | 설정 |
-|---|---|
-| ![대시보드 다크](docs/images/dashboard-dark.png) | ![설정](docs/images/settings.png) |
+| 대시보드(다크) | OpenRouter 잔액 | 설정 |
+|---|---|---|
+| ![대시보드 다크](docs/images/dashboard-dark.png) | ![OpenRouter 잔액](docs/images/balance.png) | ![설정](docs/images/settings.png) |
 
 모든 화면은 앱 내장 synthetic 데모 모드(`--demo`)로 캡처했으며 실제 계정 데이터는 없습니다.
 
@@ -91,12 +91,14 @@ agentdeck shell install --shell bash     # 선택: claude/codex/grok이 선택 �
 | 구분 | 제공자 |
 |---|---|
 | 한도 + 다중 계정 | Claude Code, Codex, Grok |
-| 한도 | Cursor, Grok Bot, GitHub Copilot*, Antigravity, Kimi, Devin, Z.ai, MiniMax, Qwen Code, Mistral Vibe, Ollama Cloud, Synthetic, Kimchi, Muse |
-| 잔액 | DeepSeek*, OpenRouter, Fireworks* 및 위 제공자의 잔액형 요금제 |
+| 한도 | Cursor, Grok Bot, GitHub Copilot*, Antigravity, Devin, Mistral Vibe, Ollama Cloud, Synthetic, Kimchi, Muse |
+| 잔액 | OpenRouter, Fireworks* 및 위 제공자의 잔액형 요금제 |
 | 로컬 통계 | Hermes, OpenCode, Local models 및 위 모든 제공자 |
+| 추가 지원 제공자 | DeepSeek*, Kimi, MiniMax, Qwen Code, Z.ai |
 
 \* 로컬 계산 **추정치**를 표시할 수 있으며 항상 추정치로 표기합니다. 제공자별 데이터 출처와 검증
 상태: [docs/support-matrix.md](docs/support-matrix.md)
+앱과 CLI의 제공자 목록에는 일관된 표시 순서를 적용합니다. [표시 순서](docs/provider-ordering.md)를 참고하세요.
 
 ## 동작 방식
 

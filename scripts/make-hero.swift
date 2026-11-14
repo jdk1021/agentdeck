@@ -35,10 +35,10 @@ var x: CGFloat = 230
 for item in ["File", "Edit", "View", "Window", "Help"] { (item as NSString).draw(at: NSPoint(x: x, y: H - barHeight + 15), withAttributes: regular); x += (item as NSString).size(withAttributes: regular).width + 44 }
 ("Fri 9:41 AM" as NSString).draw(at: NSPoint(x: W - 230, y: H - barHeight + 15), withAttributes: regular)
 // The AgentDeck status item, highlighted as if its panel is open.
-let itemRect = NSRect(x: W - 520, y: H - barHeight + 8, width: 150, height: barHeight - 16)
+let itemRect = NSRect(x: W - 520, y: H - barHeight + 8, width: 64, height: barHeight - 16)
 NSColor.black.withAlphaComponent(0.10).setFill(); NSBezierPath(roundedRect: itemRect, xRadius: 12, yRadius: 12).fill()
 let glyph = NSImage(size: NSSize(width: 36, height: 32), flipped: false) { r in
-    NSColor(white: 0.1, alpha: 1).setStroke(); NSColor(white: 0.1, alpha: 1).setFill()
+    NSColor.systemOrange.setStroke(); NSColor.systemOrange.setFill()
     let back = NSBezierPath(roundedRect: NSRect(x: 11, y: 13, width: 22, height: 16), xRadius: 4, yRadius: 4); back.lineWidth = 2.8; back.stroke()
     NSBezierPath(roundedRect: NSRect(x: 3, y: 3, width: 22, height: 18), xRadius: 4.4, yRadius: 4.4).fill()
     NSColor.white.setFill()
@@ -47,7 +47,6 @@ let glyph = NSImage(size: NSSize(width: 36, height: 32), flipped: false) { r in
     return true
 }
 glyph.draw(in: NSRect(x: itemRect.minX + 14, y: itemRect.minY + 8, width: 36, height: 32))
-("88%" as NSString).draw(at: NSPoint(x: itemRect.minX + 60, y: itemRect.minY + 7), withAttributes: textAttrs)
 
 func place(_ image: NSImage, _ rect: NSRect, radius: CGFloat) {
     ctx.saveGState()

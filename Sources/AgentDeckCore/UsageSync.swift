@@ -65,7 +65,9 @@ public struct UsageSync {
                 grouped[value["id"].string, default: []].append(.object(validated))
             }
         }
-        return grouped.keys.sorted().map { id in
+        return grouped.keys.sorted { lhs, rhs in
+            ProviderDisplayOrder.precedes(lhs, rhs) { lhs < rhs }
+        }.map { id in
             let rows = grouped[id]!
             var o: [String: JSONValue] = ["id": .string(id)]
             // Lifetime figures can include shared history; upstream takes the widest rather than summing it.

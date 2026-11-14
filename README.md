@@ -20,8 +20,8 @@ automatically before you hit a limit.
 
 ## Highlights
 
-- **23 providers, one glance.** Claude Code, Codex, Grok, Cursor, GitHub Copilot, Antigravity, Kimi,
-  DeepSeek, OpenRouter, Fireworks and more. Limits, balances and local statistics are kept distinct — a
+- **23 providers, one glance.** Claude Code, Codex, Grok, Cursor, GitHub Copilot, Antigravity,
+  OpenRouter, Fireworks and more. Limits, balances and local statistics are kept distinct — a
   limit the provider does not report is never invented.
 - **Multiple accounts that don't step on each other.** Each extra Claude Code / Codex / Grok account gets
   its own home and Keychain namespace. MCP servers, hooks, plugins, skills and history are shared with
@@ -38,17 +38,17 @@ automatically before you hit a limit.
 
 ## Screenshots
 
+| Claude Code | Codex accounts | Grok |
+|---|---|---|
+| ![Claude Code](docs/images/dashboard-light.png) | ![Codex accounts](docs/images/accounts.png) | ![Grok](docs/images/grok.png) |
+
 | Menu bar panel | Dark mode |
 |---|---|
 | ![Menu bar panel](docs/images/panel-light.png) | ![Menu bar panel, dark](docs/images/panel-dark.png) |
 
-| Accounts and automatic switching | Prepaid balance (estimate clearly marked) |
-|---|---|
-| ![Accounts](docs/images/accounts.png) | ![Balance](docs/images/balance.png) |
-
-| Dashboard, dark | Settings |
-|---|---|
-| ![Dashboard dark](docs/images/dashboard-dark.png) | ![Settings](docs/images/settings.png) |
+| Dashboard, dark | OpenRouter balance | Settings |
+|---|---|---|
+| ![Dashboard dark](docs/images/dashboard-dark.png) | ![OpenRouter balance](docs/images/balance.png) | ![Settings](docs/images/settings.png) |
 
 All screenshots use the app's built-in synthetic demo mode (`--demo`); no real account data is shown.
 
@@ -95,12 +95,14 @@ Run `agentdeck help` for every command.
 | Kind | Providers |
 |---|---|
 | Limits + multiple accounts | Claude Code, Codex, Grok |
-| Limits | Cursor, Grok Bot, GitHub Copilot*, Antigravity, Kimi, Devin, Z.ai, MiniMax, Qwen Code, Mistral Vibe, Ollama Cloud, Synthetic, Kimchi, Muse |
-| Balances | DeepSeek*, OpenRouter, Fireworks*, and balance-based plans of the above |
+| Limits | Cursor, Grok Bot, GitHub Copilot*, Antigravity, Devin, Mistral Vibe, Ollama Cloud, Synthetic, Kimchi, Muse |
+| Balances | OpenRouter, Fireworks*, and balance-based plans of the above |
 | Local statistics | Hermes, OpenCode, Local models, and every provider above |
+| Additional supported providers | DeepSeek*, Kimi, MiniMax, Qwen Code, Z.ai |
 
 \* can show a locally derived **estimate**, always labelled as such. Full per-provider detail, data
 sources and verification status: [docs/support-matrix.md](docs/support-matrix.md).
+Provider lists use a consistent display order across the app and CLI. See [display ordering](docs/provider-ordering.md).
 
 ## How it works
 

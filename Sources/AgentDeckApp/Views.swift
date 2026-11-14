@@ -29,15 +29,12 @@ struct MenuPanel: View {
         model.providers.filter { p in
             query.isEmpty ? model.record(p.id)?.ready == true
                 : p.name.localizedCaseInsensitiveContains(query) || p.id.contains(query.lowercased())
-        }.sorted { (model.record($0.id)?.peak ?? -1) > (model.record($1.id)?.peak ?? -1) }
+        }.sorted { lhs, rhs in
+            ProviderDisplayOrder.precedes(lhs.id, rhs.id) {
+                (model.record(lhs.id)?.peak ?? -1) > (model.record(rhs.id)?.peak ?? -1)
+            }
+        }
     }
-    var highest: (Provider, UsageLimit)? {
-        model.providers.compactMap { p -> (Provider, UsageLimit)? in
-            guard let r = model.record(p.id), r.ready, let l = r.topLimit else { return nil }
-            return (p, l)
-        }.max { $0.1.level(at: Date()) < $1.1.level(at: Date()) }
-    }
-
     var body: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
@@ -45,11 +42,11 @@ struct MenuPanel: View {
                 Text("AgentDeck").font(.system(size: 16, weight: .bold)).foregroundStyle(Deck.text)
                 if model.demo { Pill(text: "Demo", foreground: Deck.accent, background: Deck.accentSoft) }
                 Spacer()
-                if model.refreshing { ProgressView().controlSize(.small) }
-                IconButton(symbol: "arrow.clockwise", help: "Refresh all providers") { model.refresh(force: true) }
-                    .disabled(model.refreshing)
+                RefreshButton(refreshing: model.refreshing) { model.refresh(force: true) }
+                    .buttonStyle(.plain)
+                    .frame(width: 30, height: 30)
+                    .background(Deck.raised, in: Circle())
             }
-            if let (provider, limit) = highest { summary(provider, limit) }
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").foregroundStyle(Deck.tertiary)
                 TextField("Search 23 providers", text: $query).textFieldStyle(.plain).font(.system(size: 13))
@@ -90,24 +87,6 @@ struct MenuPanel: View {
         .background(Deck.background)
     }
 
-    func summary(_ provider: Provider, _ limit: UsageLimit) -> some View {
-        let level = limit.level(at: Date())
-        return DeckCard(padding: 18) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Highest usage right now").font(.system(size: 12, weight: .medium)).foregroundStyle(Deck.secondary)
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(Deck.percent(level)).font(.system(size: 34, weight: .bold, design: .rounded)).foregroundStyle(Deck.tint(for: level)).monospacedDigit()
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(provider.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Deck.text)
-                        Text(limit.label).font(.system(size: 12)).foregroundStyle(Deck.secondary)
-                    }
-                    Spacer()
-                    if let reset = limit.resetsAt { Text(Deck.resetText(reset)).font(.system(size: 11, weight: .medium)).foregroundStyle(Deck.tertiary) }
-                }
-                UsageBar(value: level, tint: Deck.tint(for: level))
-            }
-        }
-    }
 }
 
 struct PanelRow: View {
@@ -127,6 +106,16 @@ struct PanelRow: View {
                     }
                     Spacer()
                     trailing(record)
+                    Button {
+                        model.selection = provider.id
+                        openWindow(id: "dashboard")
+                        NSApp.activate(ignoringOtherApps: true)
+                    } label: {
+                        Image(systemName: "arrow.up.right.square")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open \(provider.name) details")
+                    .accessibilityLabel("Open \(provider.name) details")
                 }
                 if let record {
                     ForEach(record.limits.prefix(2)) { limit in
@@ -158,8 +147,6 @@ struct PanelRow: View {
                 }
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { model.selection = provider.id; openWindow(id: "dashboard"); NSApp.activate(ignoringOtherApps: true) }
     }
     func subtitle(_ record: UsageRecord?, _ registry: AccountRegistry?) -> String {
         var parts: [String] = []
@@ -201,13 +188,15 @@ struct Dashboard: View {
             default: passes = true
             }
             return matches && passes
-        }.sorted {
-            if sortByUsage {
-                let a = model.record($0.id), b = model.record($1.id)
-                if (a?.ready == true) != (b?.ready == true) { return a?.ready == true }
-                if (a?.peak ?? -1) != (b?.peak ?? -1) { return (a?.peak ?? -1) > (b?.peak ?? -1) }
+        }.sorted { lhs, rhs in
+            ProviderDisplayOrder.precedes(lhs.id, rhs.id) {
+                if sortByUsage {
+                    let a = model.record(lhs.id), b = model.record(rhs.id)
+                    if (a?.ready == true) != (b?.ready == true) { return a?.ready == true }
+                    if (a?.peak ?? -1) != (b?.peak ?? -1) { return (a?.peak ?? -1) > (b?.peak ?? -1) }
+                }
+                return lhs.name < rhs.name
             }
-            return $0.name < $1.name
         }
     }
     var body: some View {
@@ -236,11 +225,13 @@ struct Dashboard: View {
             .background(Deck.background)
         }
         .toolbar {
-            ToolbarItemGroup {
-                if model.refreshing { ProgressView().controlSize(.small) }
+            ToolbarItem(id: "sort", placement: .primaryAction) {
                 Toggle(isOn: $sortByUsage) { Label("Sort by usage", systemImage: "arrow.up.arrow.down") }.help("Sort by usage")
-                Button { model.refresh(force: true) } label: { Label("Refresh", systemImage: "arrow.clockwise") }
-                    .disabled(model.refreshing).help("Refresh all providers")
+            }
+            ToolbarItem(id: "refresh", placement: .primaryAction) {
+                RefreshButton(refreshing: model.refreshing) { model.refresh(force: true) }
+            }
+            ToolbarItem(id: "settings", placement: .primaryAction) {
                 SettingsLink { Label("Settings", systemImage: "gearshape") }.help("Settings")
             }
         }
@@ -614,7 +605,10 @@ struct ModelsCard: View {
             DeckCard {
                 VStack(alignment: .leading, spacing: 14) {
                     CardTitle(text: "Models", trailing: "recorded tokens")
-                    ForEach(models.keys.sorted { (totals[$0] ?? 0) > (totals[$1] ?? 0) }, id: \.self) { name in
+                    ForEach(models.keys.sorted { lhs, rhs in
+                        let left = ProviderDisplayOrder.isTrailingModel(lhs), right = ProviderDisplayOrder.isTrailingModel(rhs)
+                        return left == right ? (totals[lhs] ?? 0) > (totals[rhs] ?? 0) : !left
+                    }, id: \.self) { name in
                         let bucket = models[name] ?? .null
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
@@ -641,7 +635,7 @@ struct ModelsCard: View {
 
 struct SettingsPanel: View {
     @EnvironmentObject var model: DeckModel
-    @State private var keyProvider = "deepseek"
+    @State private var keyProvider = "grok"
     @State private var secret = ""
     @State private var loginAtLaunch = SMAppService.mainApp.status == .enabled
     @State private var message = ""

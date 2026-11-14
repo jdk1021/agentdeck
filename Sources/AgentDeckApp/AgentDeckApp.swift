@@ -6,6 +6,7 @@ import AgentDeckCore
 
 @main
 struct AgentDeckApp: App {
+    @NSApplicationDelegateAdaptor(DeckAppDelegate.self) private var appDelegate
     @StateObject private var model = DeckModel()
     var body: some Scene {
         MenuBarExtra {
@@ -29,23 +30,40 @@ struct AgentDeckApp: App {
     }
 }
 
+final class DeckAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !DemoData.enabled, !CommandLine.arguments.contains("--open-dashboard") else { return }
+        for window in NSApp.windows where window.title == "AgentDeck" || window.title == "AgentDeck Panel" {
+            window.close()
+        }
+    }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { false }
+    func applicationShouldRestoreSecureApplicationState(_ app: NSApplication) -> Bool { false }
+    func applicationShouldSaveSecureApplicationState(_ app: NSApplication) -> Bool { false }
+}
+
 struct MenuBarLabel: View {
     @EnvironmentObject var model: DeckModel
     @Environment(\.openWindow) var openWindow
     @Environment(\.openSettings) var openSettings
+    @State private var handledLaunch = false
     var body: some View {
-        HStack(spacing: 4) {
-            Image(nsImage: model.records.contains(where: \.isStale) ? NSImage(systemSymbolName: "exclamationmark.circle", accessibilityDescription: nil)! : DeckGlyph.image)
-            Text(model.menuTitle).monospacedDigit()
-        }
+        Image(nsImage: model.menuStatus.image)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("AgentDeck, \(model.menuTitle)")
+        .accessibilityLabel("AgentDeck, \(model.menuStatus.description)")
+        .help(model.menuStatus.description)
         .onAppear {
+            guard !handledLaunch else { return }
+            handledLaunch = true
             // Demo mode is for screenshots and UI checks: show the windows straight away.
             if let style = DemoData.option("--demo-appearance") { NSApp.appearance = NSAppearance(named: style == "dark" ? .darkAqua : .aqua) }
-            if model.demo || CommandLine.arguments.contains("--open-dashboard") { openWindow(id: "dashboard") }
-            if model.demo && CommandLine.arguments.contains("--panel-preview") { openWindow(id: "panel-preview") }
-            if model.demo && CommandLine.arguments.contains("--demo-settings") { openSettings() }
+            if model.demo && CommandLine.arguments.contains("--panel-preview") {
+                openWindow(id: "panel-preview")
+            } else if model.demo && CommandLine.arguments.contains("--demo-settings") {
+                openSettings()
+            } else if model.demo || CommandLine.arguments.contains("--open-dashboard") {
+                openWindow(id: "dashboard")
+            }
             if model.demo || CommandLine.arguments.contains("--open-dashboard") { NSApp.activate(ignoringOtherApps: true) }
         }
     }
@@ -82,6 +100,7 @@ final class DeckModel: ObservableObject {
             accounts = AccountManager(store: store, runtime: runtime)
             providers = try Provider.load(from: runtime.root)
             settings = try store.settings(); records = try store.records()
+            if demo { refreshing = CommandLine.arguments.contains("--demo-refreshing") }
             // Opening the menu bar panel or the dashboard checks right away (see refreshOnOpen).
             keyObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.refreshOnOpen() }
@@ -123,13 +142,14 @@ final class DeckModel: ObservableObject {
         guard !refreshing, let store, let fresh = try? store.records() else { return }
         records = fresh
     }
-    var menuTitle: String {
-        let used = records.filter { $0.ready }
-        let peaks = used.compactMap(\.peak)
-        if let max = peaks.max() { return String(format: "%.0f%%", max * 100) }
-        return used.isEmpty ? "" : "\(used.count)"
+    var menuStatus: DeckMenuStatus {
+        let ready = records.filter(\.ready)
+        let peak = ready.filter { !$0.isStale }.compactMap(\.peak).max() ?? 0
+        if peak >= 0.95 { return .critical }
+        if peak >= 0.8 { return .warning }
+        if ready.contains(where: \.isStale) { return .stale }
+        return .normal
     }
-    var menuSymbol: String { records.contains(where: \.isStale) ? "exclamationmark.circle" : "cpu" }
     var cli: URL {
         Bundle.main.executableURL!.deletingLastPathComponent().appendingPathComponent("agentdeck")
     }

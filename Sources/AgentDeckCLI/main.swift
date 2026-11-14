@@ -53,7 +53,9 @@ struct AgentDeckCLI {
         case "providers":
             for p in providers { print("\(p.id)\t\(p.name)\t\(p.supportsAccounts ? "usage + accounts" : "usage")") }
         case "status":
-            let records = try store.records().sorted { $0.name < $1.name }
+            let records = try store.records().sorted { lhs, rhs in
+                ProviderDisplayOrder.precedes(lhs.id, rhs.id) { lhs.name < rhs.name }
+            }
             if args.contains("--json") { try printJSON(records.map(\.raw)) }
             else {
                 for record in records {

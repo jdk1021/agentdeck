@@ -94,10 +94,10 @@
   <section>
     <h2 data-i18n="h-shots">A closer look</h2>
     <div class="shots">
-      <figure><img src="images/panel-light.png" alt="Menu bar panel"><figcaption data-i18n="c1">Menu bar panel — highest usage first</figcaption></figure>
-      <figure><img src="images/accounts.png" alt="Accounts"><figcaption data-i18n="c2">Accounts and automatic switching</figcaption></figure>
-      <figure><img src="images/dashboard-dark.png" alt="Dashboard in dark mode"><figcaption data-i18n="c3">Dashboard, dark mode</figcaption></figure>
-      <figure><img src="images/balance.png" alt="Balance"><figcaption data-i18n="c4">Prepaid balances, estimates clearly marked</figcaption></figure>
+      <figure><img src="images/dashboard-light.png" alt="Claude Code"><figcaption data-i18n="c1">Claude Code usage</figcaption></figure>
+      <figure><img src="images/accounts.png" alt="Codex accounts"><figcaption data-i18n="c2">Codex accounts and automatic switching</figcaption></figure>
+      <figure><img src="images/grok.png" alt="Grok"><figcaption data-i18n="c3">Grok usage</figcaption></figure>
+      <figure><img src="images/balance.png" alt="OpenRouter balance"><figcaption data-i18n="c4">OpenRouter prepaid balance</figcaption></figure>
     </div>
   </section>
 
@@ -114,8 +114,8 @@
   <footer data-i18n="footer">MIT License · Not affiliated with any provider; product names and logos belong to their owners · <a href="https://github.com/jdk1021/agentdeck">Source on GitHub</a></footer>
 </div>
 <script>
-const providers = [["claude","Claude Code"],["codex","Codex"],["grok","Grok"],["cursor","Cursor"],["copilot","GitHub Copilot"],["agy","Antigravity"],["kimi","Kimi"],["deepseek","DeepSeek"],["openrouter","OpenRouter"],["fireworks","Fireworks"],["zai","Z.ai"],["minimax","MiniMax"],["qwen","Qwen Code"],["vibe","Mistral Vibe"],["ollama","Ollama Cloud"],["opencode","OpenCode"],["hermes","Hermes"],["devin","Devin"],["synthetic","Synthetic"],["kimchi","Kimchi"],["muse","Muse"],["grokbot","Grok Bot"]];
-document.getElementById("providers").innerHTML = providers.map(([id, name]) => `<span><img src="icons/${id}.png" alt="">${name}</span>`).join("") + `<span>+ Local models</span>`;
+const providers = [["claude","Claude Code"],["codex","Codex"],["grok","Grok"],["cursor","Cursor"],["copilot","GitHub Copilot"],["agy","Antigravity"],["openrouter","OpenRouter"],["fireworks","Fireworks"],["vibe","Mistral Vibe"],["ollama","Ollama Cloud"],["opencode","OpenCode"],["hermes","Hermes"],["devin","Devin"],["synthetic","Synthetic"],["kimchi","Kimchi"],["muse","Muse"],["grokbot","Grok Bot"],["local","Local models"],["deepseek","DeepSeek"],["kimi","Kimi"],["minimax","MiniMax"],["qwen","Qwen Code"],["zai","Z.ai"]];
+document.getElementById("providers").innerHTML = providers.map(([id, name]) => `<span>${id === "local" ? "" : `<img src="icons/${id}.png" alt="">`}${name}</span>`).join("");
 const ko = {
   credit: '<a href="https://github.com/omacom/omarchy">Omarchy</a>(MIT, David Heinemeier Hansson과 Omarchy 기여자들)의 에이전트 사용량 수집기를 바탕으로 만들었습니다. 깊이 감사드립니다.',
   title: "모든 AI 코딩 에이전트의 한도를<br>메뉴 막대 한곳에서.",
@@ -129,7 +129,7 @@ const ko = {
   f5t: "자체 완결형", f5: "수집기용 Python과 ripgrep이 앱 안에 들어 있어 따로 설치할 것이 없습니다.",
   f6t: "기본은 로컬 보관", f6: "사용량은 Mac 안에만 머뭅니다. 선택 기능인 기기 간 합계도 숫자만 내보내며 로그인이나 대화는 내보내지 않습니다.",
   "h-providers": "지원 제공자", "h-shots": "자세히 보기",
-  c1: "메뉴 막대 패널 — 사용량 높은 순", c2: "계정과 자동 전환", c3: "대시보드(다크 모드)", c4: "선불 잔액, 추정치는 명확히 표시",
+  c1: "Claude Code 사용량", c2: "Codex 계정과 자동 전환", c3: "Grok 사용량", c4: "OpenRouter 선불 잔액",
   "h-install": "설치",
   s1: '<b>또는</b> <a href="https://github.com/jdk1021/agentdeck/releases/latest">Releases</a>에서 DMG를 내려받아 AgentDeck을 응용 프로그램 폴더로 옮기세요.',
   s2: "<b>처음 실행:</b> ad-hoc 서명이며 공증되지 않은 앱입니다. 시스템 설정 → 개인정보 보호 및 보안에서 <b>그래도 열기</b>를 선택하세요.",

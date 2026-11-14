@@ -133,6 +133,8 @@ public struct Provider: Identifiable, Codable, Sendable {
     }
     public static func load(from runtime: URL) throws -> [Provider] {
         struct Inventory: Decodable { let collectors: [Provider] }
-        return try JSONDecoder().decode(Inventory.self, from: Data(contentsOf: runtime.appendingPathComponent("inventory.json"))).collectors
+        let providers = try JSONDecoder().decode(Inventory.self, from: Data(contentsOf: runtime.appendingPathComponent("inventory.json"))).collectors
+        return providers.filter { !ProviderDisplayOrder.isTrailingProvider($0.id) }
+            + providers.filter { ProviderDisplayOrder.isTrailingProvider($0.id) }
     }
 }

@@ -28,6 +28,30 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(d?.action, .switched); XCTAssertEqual(d?.target, "b")
         XCTAssertNil(SwitchPolicy.decide(registry: registry(), record: try record(levels: ["a": 0.949, "b": 0.4]), now: now))
     }
+    func testProviderDisplayGroupsStayAheadOfUsageAndKeepAllProviders() throws {
+        let root = try temp()
+        let ids = ["deepseek", "claude", "kimi", "cursor", "minimax", "codex", "qwen", "grok", "zai"]
+        let data = try JSONSerialization.data(withJSONObject: ["collectors": ids.map { ["id": $0, "name": $0] }])
+        try data.write(to: root.appendingPathComponent("inventory.json"))
+        let providers = try Provider.load(from: root)
+        XCTAssertEqual(providers.count, ids.count)
+        XCTAssertEqual(Set(providers.map(\.id)), Set(ids))
+        XCTAssertEqual(Array(providers.prefix(4)).map(\.id), ["claude", "cursor", "codex", "grok"])
+        // A nearly exhausted trailing provider still comes after an idle preferred provider.
+        let levels = ["claude": 0.01, "grok": 0.2, "cursor": 0.3, "deepseek": 1.0, "qwen": 0.99]
+        let ordered = levels.keys.sorted { lhs, rhs in
+            ProviderDisplayOrder.precedes(lhs, rhs) { levels[lhs]! > levels[rhs]! }
+        }
+        XCTAssertEqual(ordered, ["cursor", "grok", "claude", "deepseek", "qwen"])
+        XCTAssertFalse(ProviderDisplayOrder.isTrailingProvider("cursor"))
+        XCTAssertFalse(ProviderDisplayOrder.isTrailingProvider("grok"))
+        for model in ["deepseek-v3", "openrouter/qwen/qwen3", "moonshotai/kimi-k2", "z-ai/glm-4.6", "MiniMax-M2"] {
+            XCTAssertTrue(ProviderDisplayOrder.isTrailingModel(model))
+        }
+        for model in ["grok-4", "claude-sonnet", "gpt-codex", "cursor-composer"] {
+            XCTAssertFalse(ProviderDisplayOrder.isTrailingModel(model))
+        }
+    }
     func testManualSuggestsInsteadOfSwitching() throws {
         XCTAssertEqual(SwitchPolicy.decide(registry: registry(mode: "manual"), record: try record(levels: ["a": 0.99, "b": 0.1]), now: now)?.action, .suggest)
     }

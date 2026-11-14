@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Credential-free integration checks for the native CLI and macOS adaptation."""
 from pathlib import Path
+import ast
 import hashlib
 import importlib.util
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -57,6 +59,47 @@ print(json.dumps({{'home':os.environ.get('CLAUDE_CONFIG_DIR'), 'secure':os.envir
         actual = {f.name.removeprefix('agentdeck-collect-') for f in (ROOT / 'Runtime/bin').iterdir()}
         self.assertEqual(expected, actual); self.assertEqual(len(actual), 23)
         self.assertIn('grok', expected)
+
+    def test_provider_and_status_lists_preserve_display_groups(self):
+        trailing = {'deepseek', 'kimi', 'minimax', 'qwen', 'zai'}
+        catalog = self.cli('providers').stdout.splitlines()
+        ids = [line.split('\t')[0] for line in catalog]
+        self.assertEqual(len(ids), 23)
+        self.assertEqual(set(ids[-len(trailing):]), trailing)
+        self.assertLess(ids.index('cursor'), len(ids) - len(trailing))
+        self.assertLess(ids.index('grok'), len(ids) - len(trailing))
+        usage = Path(self.env['AGENTDECK_HOME']) / 'usage'
+        usage.mkdir(parents=True, exist_ok=True)
+        for provider in ids:
+            (usage / f'{provider}.json').write_text(json.dumps({
+                'schemaVersion': 1, 'id': provider, 'name': provider, 'ready': True,
+                'limits': [{'label': 'Fixture', 'percent': 1 if provider in trailing else 0.01}]
+            }))
+        records = json.loads(self.cli('status', '--json').stdout)
+        self.assertEqual(len(records), 23)
+        self.assertEqual({r['id'] for r in records[-len(trailing):]}, trailing)
+        lines = self.cli('status').stdout.splitlines()
+        self.assertEqual({line.split('\t')[0] for line in lines[-len(trailing):]}, trailing)
+
+    def test_website_support_table_and_screenshot_examples_match_provider_policy(self):
+        trailing = {'deepseek', 'kimi', 'minimax', 'qwen', 'zai'}
+        expected = {line.split('\t')[0] for line in self.cli('providers').stdout.splitlines()}
+        website = (ROOT / 'site/index.html').read_text()
+        listed = json.loads(re.search(r'const providers = (\[.*\]);', website).group(1))
+        self.assertEqual({row[0] for row in listed}, expected)
+        self.assertEqual({row[0] for row in listed[-len(trailing):]}, trailing)
+        rows = re.findall(r'^\| .*? · `([^`]+)` \|', (ROOT / 'docs/support-matrix.md').read_text(), re.M)
+        self.assertEqual(set(rows), expected)
+        self.assertEqual(set(rows[-len(trailing):]), trailing)
+        figures = re.findall(r'<figure><img src="([^"]+)"', website)
+        self.assertEqual(figures[2], 'images/grok.png')
+        tree = ast.parse((ROOT / 'scripts/capture-screenshots.py').read_text())
+        shots = next(ast.literal_eval(node.value) for node in tree.body
+                     if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'SHOTS' for t in node.targets))
+        selections = {name: args[args.index('--demo-select') + 1] for name, args, _ in shots if '--demo-select' in args}
+        self.assertEqual(selections['grok'], 'grok')
+        self.assertEqual(selections['balance'], 'openrouter')
+        self.assertNotIn('deepseek', selections.values())
 
     def test_existing_claude_settings_hooks_and_transcripts_preserved(self):
         primary = self.home / '.claude'; primary.mkdir()

@@ -53,6 +53,7 @@ enum DemoData {
         }
         let claudeLimits = [limit("Session (5-hour)", 0.42, 2.5), limit("Weekly (7-day)", 0.71, 61)]
         let codexLimits = [limit("5h window", 0.88, 1.2), limit("Weekly (7-day)", 0.64, 90)]
+        let grokLimits = [limit("Monthly credits", 0.63, 360)]
         let records: [JSONValue] = [
             record("claude", plan: "Max 5x", limits: claudeLimits, prompts: 64, models: ["model-large": 2_400_000, "model-fast": 610_000],
                    extra: ["accounts": .array([account("primary", "Max 5x", claudeLimits, active: true),
@@ -60,9 +61,11 @@ enum DemoData {
             record("codex", plan: "Plus", limits: codexLimits, prompts: 41, models: ["model-codex": 1_900_000],
                    extra: ["accounts": .array([account("primary", "Plus", codexLimits, active: true),
                                                account("demo-spare", "Plus", [limit("5h window", 0.05, 3), limit("Weekly (7-day)", 0.22, 70)], active: false)])]),
+            record("grok", plan: "SuperGrok", limits: grokLimits, prompts: 28, models: ["model-grok": 840_000],
+                   extra: ["accounts": .array([account("primary", "SuperGrok", grokLimits, active: true),
+                                               account("demo-team", "Team", [limit("Monthly credits", 0.18, 360)], active: false)])]),
             record("copilot", plan: "Pro", limits: [limit("Monthly allowance (est.)", 0.37, 400)], prompts: 12),
             record("cursor", plan: "Pro", limits: [limit("Included usage", 0.54, 300)], prompts: 18),
-            record("deepseek", plan: "Prepaid", balance: .object(["remaining": .number(18.42), "funded": .number(25), "spent": .number(6.58), "currency": .string("USD"), "estimated": .bool(true)]), prompts: 9),
             record("openrouter", plan: "Credits", balance: .object(["remaining": .number(42.10), "funded": .number(50), "spent": .number(7.90), "currency": .string("USD"), "estimated": .bool(false)]), prompts: 7),
             record("hermes", plan: "", prompts: 5),
             record("ollama", plan: "Local", prompts: 3, extra: ["limitsStale": .bool(true), "usageStatusText": .string("Showing previous data")]),
@@ -70,7 +73,7 @@ enum DemoData {
         for value in records {
             try store.write(value, to: store.paths.usage.appendingPathComponent(value["id"].string + ".json"), backup: false)
         }
-        for (provider, label, id) in [("claude", "Work (demo)", "demo-work"), ("codex", "Spare (demo)", "demo-spare")] {
+        for (provider, label, id) in [("claude", "Work (demo)", "demo-work"), ("codex", "Spare (demo)", "demo-spare"), ("grok", "Team (demo)", "demo-team")] {
             var registry = AccountRegistry()
             registry.accounts = [Account(id: "primary", label: "Personal (demo)", home: "/demo/primary", primary: true, pendingLogin: false),
                                  Account(id: id, label: label, home: "/demo/\(id)", pendingLogin: false)]

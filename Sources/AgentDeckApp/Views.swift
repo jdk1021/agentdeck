@@ -29,7 +29,11 @@ struct MenuPanel: View {
         model.providers.filter { p in
             query.isEmpty ? model.record(p.id)?.ready == true
                 : p.name.localizedCaseInsensitiveContains(query) || p.id.contains(query.lowercased())
-        }.sorted { (model.record($0.id)?.peak ?? -1) > (model.record($1.id)?.peak ?? -1) }
+        }.sorted { lhs, rhs in
+            ProviderDisplayOrder.precedes(lhs.id, rhs.id) {
+                (model.record(lhs.id)?.peak ?? -1) > (model.record(rhs.id)?.peak ?? -1)
+            }
+        }
     }
     var body: some View {
         VStack(spacing: 10) {
@@ -184,13 +188,15 @@ struct Dashboard: View {
             default: passes = true
             }
             return matches && passes
-        }.sorted {
-            if sortByUsage {
-                let a = model.record($0.id), b = model.record($1.id)
-                if (a?.ready == true) != (b?.ready == true) { return a?.ready == true }
-                if (a?.peak ?? -1) != (b?.peak ?? -1) { return (a?.peak ?? -1) > (b?.peak ?? -1) }
+        }.sorted { lhs, rhs in
+            ProviderDisplayOrder.precedes(lhs.id, rhs.id) {
+                if sortByUsage {
+                    let a = model.record(lhs.id), b = model.record(rhs.id)
+                    if (a?.ready == true) != (b?.ready == true) { return a?.ready == true }
+                    if (a?.peak ?? -1) != (b?.peak ?? -1) { return (a?.peak ?? -1) > (b?.peak ?? -1) }
+                }
+                return lhs.name < rhs.name
             }
-            return $0.name < $1.name
         }
     }
     var body: some View {
@@ -599,7 +605,10 @@ struct ModelsCard: View {
             DeckCard {
                 VStack(alignment: .leading, spacing: 14) {
                     CardTitle(text: "Models", trailing: "recorded tokens")
-                    ForEach(models.keys.sorted { (totals[$0] ?? 0) > (totals[$1] ?? 0) }, id: \.self) { name in
+                    ForEach(models.keys.sorted { lhs, rhs in
+                        let left = ProviderDisplayOrder.isTrailingModel(lhs), right = ProviderDisplayOrder.isTrailingModel(rhs)
+                        return left == right ? (totals[lhs] ?? 0) > (totals[rhs] ?? 0) : !left
+                    }, id: \.self) { name in
                         let bucket = models[name] ?? .null
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
@@ -626,7 +635,7 @@ struct ModelsCard: View {
 
 struct SettingsPanel: View {
     @EnvironmentObject var model: DeckModel
-    @State private var keyProvider = "deepseek"
+    @State private var keyProvider = "grok"
     @State private var secret = ""
     @State private var loginAtLaunch = SMAppService.mainApp.status == .enabled
     @State private var message = ""

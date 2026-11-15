@@ -14,6 +14,58 @@ final class CoreTests: XCTestCase {
         r.accounts = [Account(id: "a", label: "A", home: "/a", pendingLogin: false), Account(id: "b", label: "B", home: "/b", pendingLogin: false), Account(id: "c", label: "C", home: "/c", pendingLogin: false)]
         r.active = "a"; return r
     }
+    func testEmailIsTheAccountNameAndLabelIsAnOptionalMemo() throws {
+        let legacy = Data(#"{"id":"primary","label":"Primary","home":"/fixture","primary":true,"pendingLogin":false}"#.utf8)
+        var account = try JSONDecoder().decode(Account.self, from: legacy)
+        XCTAssertNil(account.email)
+        XCTAssertEqual(account.memo, "")
+        XCTAssertEqual(account.displayName, "Email unavailable")
+        account.email = "person@example.invalid"
+        account.label = "Work"
+        XCTAssertEqual(account.displayName, "person@example.invalid")
+        XCTAssertEqual(account.memo, "Work")
+        XCTAssertEqual(account.menuTitle, "person@example.invalid · Work")
+        account.label = ""
+        XCTAssertEqual(account.menuTitle, "person@example.invalid")
+    }
+
+    func testClaudeIdentityFollowsTheAccountHomeAndUpdatedProfile() throws {
+        let root = try temp(), primary = root.appendingPathComponent(".claude"), secondary = root.appendingPathComponent("secondary")
+        try FileManager.default.createDirectory(at: primary, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: secondary, withIntermediateDirectories: true)
+        let main = root.appendingPathComponent(".claude.json"), other = secondary.appendingPathComponent(".claude.json")
+        try Data(#"{"oauthAccount":{"emailAddress":"primary@example.invalid"}}"#.utf8).write(to: main)
+        try Data(#"{"oauthAccount":{"emailAddress":"secondary@example.invalid"}}"#.utf8).write(to: other)
+        let a = Account(id: "primary", label: "Memo", home: primary.path, primary: true)
+        let b = Account(id: "other", label: "Memo", home: secondary.path)
+        XCTAssertEqual(AccountIdentity.email(provider: "claude", account: a, userHome: root), "primary@example.invalid")
+        XCTAssertEqual(AccountIdentity.email(provider: "claude", account: b, userHome: root), "secondary@example.invalid")
+        try Data(#"{"oauthAccount":{"emailAddress":"new@example.invalid"}}"#.utf8).write(to: other)
+        XCTAssertEqual(AccountIdentity.email(provider: "claude", account: b, userHome: root), "new@example.invalid")
+        try Data("{}".utf8).write(to: other)
+        XCTAssertNil(AccountIdentity.email(provider: "claude", account: b, userHome: root))
+    }
+
+    func testCodexIdentityReadsOnlyEmailAndHonorsAPIKeyLogin() throws {
+        let root = try temp(), auth = root.appendingPathComponent("auth.json")
+        let account = Account(id: "a", label: "Memo", home: root.path)
+        let claims = Data(#"{"email":"codex@example.invalid","private":"fixture-secret"}"#.utf8).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+        let token: JSONValue = .object(["id_token": .string("header.\(claims).signature")])
+        func write(_ mode: String, _ key: String = "") throws {
+            try JSONEncoder().encode(JSONValue.object(["auth_mode": .string(mode), "OPENAI_API_KEY": .string(key), "tokens": token])).write(to: auth)
+        }
+        try write("chatgpt")
+        XCTAssertEqual(AccountIdentity.email(provider: "codex", account: account, userHome: root), "codex@example.invalid")
+        try write("apikey", "fixture-secret")
+        XCTAssertNil(AccountIdentity.email(provider: "codex", account: account, userHome: root))
+        try write("", "fixture-secret")
+        XCTAssertNil(AccountIdentity.email(provider: "codex", account: account, userHome: root))
+        try write("chatgpt", "fixture-secret")
+        XCTAssertEqual(AccountIdentity.email(provider: "codex", account: account, userHome: root), "codex@example.invalid")
+        try Data(#"{"tokens":{"id_token":"malformed"}}"#.utf8).write(to: auth)
+        XCTAssertNil(AccountIdentity.email(provider: "codex", account: account, userHome: root))
+    }
     func record(levels: [String: Double], stale: Set<String> = [], reset: Date? = nil, fetched: Date? = nil, extra: [String: JSONValue] = [:]) throws -> UsageRecord {
         let rows: [JSONValue] = levels.map { id, n in
             .object(["id": .string(id), "limits": .array([.object(["label": .string("Weekly"), "percent": .number(n), "resetsAt": .string(ISO8601DateFormatter().string(from: reset ?? now.addingTimeInterval(86400)))])]),

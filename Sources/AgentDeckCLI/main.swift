@@ -14,10 +14,10 @@ struct AgentDeckCLI {
     agentdeck status [--json]
     agentdeck refresh [--force] [--limits-only] [provider ...]
     agentdeck account list <provider>
-    agentdeck account add <provider> <label>
-    agentdeck account login <provider> <id>
+    agentdeck account add <provider> [memo]
+    agentdeck account login <provider> [id]
     agentdeck account use <provider> <id|next>
-    agentdeck account rename <provider> <id> <label>
+    agentdeck account rename <provider> <id> [memo]
     agentdeck account remove|recover <provider> <id>
     agentdeck account mode <provider> <auto|manual> [50...100]
     agentdeck account sync-settings <provider> <id>
@@ -80,10 +80,14 @@ struct AgentDeckCLI {
                 let account = try manager.add(p, label: args.dropFirst(3).joined(separator: " "))
                 print("Created \(account.id). Complete login: agentdeck account login \(p.id) \(account.id)")
             case "login":
-                let id = try item(3), env = try manager.launchEnvironment(p, accountID: id, forLogin: true)
+                let id = try args.indices.contains(3) ? item(3) : manager.registry(p).active
+                let env = try manager.launchEnvironment(p, accountID: id, forLogin: true)
                 try login(provider: p, env: env, resolver: resolver)
                 try manager.finishLogin(p, id: id)
                 print("Login completed. Use agentdeck account use \(p.id) \(id) for new sessions.")
+                // Recheck the newly written credentials immediately; the GUI watches the usage directory.
+                let service = try CollectorService(store: store, runtime: runtime, resolver: resolver)
+                _ = try await service.refresh(force: true, limitsOnly: true, only: [p.id])
             case "use": try manager.use(p, id: item(3)); print("New \(p.name) sessions use the selected account.")
             case "rename": try manager.rename(p, id: item(3), label: args.dropFirst(4).joined(separator: " "))
             case "remove": try manager.remove(p, id: item(3)); print("Removed from registry; running sessions and account files retained.")

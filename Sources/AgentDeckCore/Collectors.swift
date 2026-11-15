@@ -50,9 +50,9 @@ public actor CollectorService {
                 case .switched:
                     guard let id = decision.target, let target = registry.accounts.first(where: { $0.id == id }) else { return }
                     registry.active = id; registry.lastSwitchAt = Date().timeIntervalSince1970
-                    events.append(DeckEvent(title: "\(provider.name): account switched", body: "New sessions use \(target.label). Running sessions keep their account."))
+                    events.append(DeckEvent(title: "\(provider.name): account switched", body: "New sessions use \(target.menuTitle). Running sessions keep their account."))
                 case .suggest:
-                    let label = registry.accounts.first { $0.id == decision.target }?.label ?? "another account"
+                    let label = registry.accounts.first { $0.id == decision.target }?.menuTitle ?? "another account"
                     events.append(DeckEvent(title: "\(provider.name) reached \(registry.threshold)%", body: "\(label) has available capacity. Switch in AgentDeck."))
                 case .exhausted:
                     let reset = decision.nextReset.map { " Next available reset: \($0.formatted())." } ?? " Reset time is unavailable."

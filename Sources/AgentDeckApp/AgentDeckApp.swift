@@ -193,7 +193,8 @@ final class DeckModel: ObservableObject {
         guard !demo else { error = "Demo mode shows synthetic data only; Terminal sessions are disabled."; return }
         var args: [String]
         if login {
-            args = provider.supportsAccounts ? ["account", "login", provider.id, account ?? "primary"] : ["login", provider.id]
+            args = provider.supportsAccounts ? ["account", "login", provider.id] : ["login", provider.id]
+            if provider.supportsAccounts, let account { args.append(account) }
         } else {
             args = ["run", provider.id]
             if let account { args += ["--account", account] }; args.append("--")

@@ -120,13 +120,17 @@ struct PanelRow: View {
                 if let record {
                     ForEach(record.limits.prefix(2)) { limit in
                         let level = limit.level(at: Date())
-                        VStack(spacing: 5) {
+                        VStack(alignment: .leading, spacing: 5) {
                             HStack {
                                 Text(limit.label).font(.system(size: 11, weight: .medium)).foregroundStyle(Deck.secondary)
                                 Spacer()
                                 Text(Deck.percent(level)).font(.system(size: 11, weight: .semibold)).foregroundStyle(Deck.text).monospacedDigit()
                             }
                             UsageBar(value: level, tint: Deck.tint(for: level, stale: record.isStale), height: 6)
+                            if let reset = limit.resetsAt {
+                                Text(Deck.resetText(reset)).font(.system(size: 11)).foregroundStyle(Deck.tertiary)
+                                    .help(reset.formatted(date: .abbreviated, time: .shortened))
+                            }
                         }
                         .accessibilityElement(children: .combine)
                     }
@@ -135,12 +139,12 @@ struct PanelRow: View {
                 if let registry, registry.accounts.count > 1 {
                     Menu {
                         ForEach(registry.accounts) { account in
-                            Button((account.id == registry.active ? "✓ " : "") + account.label) {
+                            Button((account.id == registry.active ? "✓ " : "") + account.menuTitle) {
                                 model.perform { try model.accounts?.use(provider, id: account.id) }
                             }.disabled(account.pendingLogin)
                         }
                     } label: {
-                        Label(registry.accounts.first { $0.id == registry.active }?.label ?? "Account", systemImage: "person.crop.circle")
+                        Label(registry.accounts.first { $0.id == registry.active }?.displayName ?? "Account", systemImage: "person.crop.circle")
                             .font(.system(size: 12, weight: .semibold))
                     }
                     .menuStyle(.borderlessButton).fixedSize()
@@ -151,7 +155,7 @@ struct PanelRow: View {
     func subtitle(_ record: UsageRecord?, _ registry: AccountRegistry?) -> String {
         var parts: [String] = []
         if let plan = record?.plan, !plan.isEmpty { parts.append(plan) }
-        if let registry, registry.accounts.count > 1, let active = registry.accounts.first(where: { $0.id == registry.active }) { parts.append(active.label) }
+        if let registry, let active = registry.accounts.first(where: { $0.id == registry.active }) { parts.append(active.displayName) }
         if parts.isEmpty, let prompts = record?.raw["todayPrompts"].double { parts.append("\(compact(prompts)) prompts today") }
         return parts.isEmpty ? provider.id : parts.joined(separator: " · ")
     }
@@ -286,6 +290,7 @@ struct ProviderDetail: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
+                if provider.supportsAccounts { accountsCard.id("accounts") }
                 if let record {
                     if record.isStale { Banner(tone: .warning, symbol: "clock.badge.exclamationmark", text: "Showing previous data. A successful refresh is required before automatic switching.") }
                     if !record.status.isEmpty { Banner(tone: .info, symbol: "info.circle.fill", text: record.status) }
@@ -306,8 +311,7 @@ struct ProviderDetail: View {
                         }
                     }
                 }
-                if provider.supportsAccounts { accountsCard.id("accounts") }
-                else {
+                if !provider.supportsAccounts {
                     Text("Usage collection only. The upstream collector has no account switching for this provider.")
                         .font(.system(size: 12)).foregroundStyle(Deck.tertiary).padding(.horizontal, 4)
                 }
@@ -325,8 +329,8 @@ struct ProviderDetail: View {
         }
         }
         .sheet(isPresented: $showAdd) { addSheet }
-        .alert("Rename account", isPresented: Binding(get: { renameID != nil }, set: { if !$0 { renameID = nil } })) {
-            TextField("Name", text: $renameText)
+        .alert("Edit account memo", isPresented: Binding(get: { renameID != nil }, set: { if !$0 { renameID = nil } })) {
+            TextField("Memo (optional)", text: $renameText)
             Button("Cancel", role: .cancel) { renameID = nil }
             Button("Save") { if let id = renameID { model.perform { try model.accounts?.rename(provider, id: id, label: renameText) } }; renameID = nil }
         }
@@ -346,6 +350,7 @@ struct ProviderDetail: View {
             Spacer()
             if provider.executable != nil {
                 Button("Sign in") { model.launch(provider, login: true) }.buttonStyle(DeckButtonStyle(kind: .secondary))
+                    .help("Sign in to the selected account")
                 Button("Open in Terminal") { model.launch(provider) }.buttonStyle(DeckButtonStyle(kind: .primary))
             }
         }
@@ -360,12 +365,13 @@ struct ProviderDetail: View {
             }
             Text("Sign-in opens in Terminal in a separate home. Running sessions keep their account. General settings are copied; credentials stay separate.")
                 .font(.system(size: 13)).foregroundStyle(Deck.secondary).fixedSize(horizontal: false, vertical: true)
-            TextField("Account name", text: $newLabel).textFieldStyle(.roundedBorder).onSubmit { addAccount() }
+            Text("Your login email is the account name. Add an optional memo to tell accounts apart.")
+                .font(.system(size: 12)).foregroundStyle(Deck.secondary)
+            TextField("Memo (optional)", text: $newLabel).textFieldStyle(.roundedBorder).onSubmit { addAccount() }
             HStack {
                 Button("Cancel") { showAdd = false }.buttonStyle(DeckButtonStyle(kind: .secondary)).keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Add and sign in") { addAccount() }.buttonStyle(DeckButtonStyle(kind: .primary)).keyboardShortcut(.defaultAction)
-                    .disabled(newLabel.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(24).frame(width: 440)
@@ -412,12 +418,16 @@ struct ProviderDetail: View {
                 Image(systemName: active ? "checkmark.circle.fill" : "circle").font(.system(size: 18))
                     .foregroundStyle(active ? Deck.accent : Deck.track)
                     .onTapGesture { if !active && !account.pendingLogin { model.perform { try model.accounts?.use(provider, id: account.id) } } }
-                    .accessibilityLabel(active ? "Selected" : "Use \(account.label)")
+                    .accessibilityLabel(active ? "Selected: \(account.displayName)" : "Use \(account.displayName)")
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(account.label).font(.system(size: 14, weight: .semibold)).foregroundStyle(Deck.text)
+                        Text(account.displayName).font(.system(size: 14, weight: .semibold)).foregroundStyle(Deck.text)
+                            .textSelection(.enabled)
                         if account.primary { Pill(text: "Primary") }
                         if account.pendingLogin { Pill(text: "Sign-in pending", foreground: Deck.warning, background: Deck.warningSoft) }
+                    }
+                    if !account.memo.isEmpty {
+                        Text("Memo: \(account.memo)").font(.system(size: 12)).foregroundStyle(Deck.secondary)
                     }
                     if let plan = data?["plan"].string, !plan.isEmpty { Text(plan).font(.system(size: 12)).foregroundStyle(Deck.secondary) }
                 }
@@ -426,7 +436,7 @@ struct ProviderDetail: View {
                     Button("Use for new sessions") { model.perform { try model.accounts?.use(provider, id: account.id) } }.disabled(account.pendingLogin)
                     Button("Open in Terminal") { model.launch(provider, account: account.id) }.disabled(account.pendingLogin)
                     Button("Sign in / Reauthenticate") { model.launch(provider, account: account.id, login: true) }
-                    Button("Rename…") { renameID = account.id; renameText = account.label }
+                    Button("Edit memo…") { renameID = account.id; renameText = account.memo }
                     if !account.primary {
                         Button("Copy settings from primary again") { model.perform { try model.accounts?.resyncSettings(provider, id: account.id) } }
                         Divider()
@@ -447,6 +457,10 @@ struct ProviderDetail: View {
                                 Text(Deck.percent(level)).font(.system(size: 11, weight: .semibold)).monospacedDigit()
                             }
                             UsageBar(value: level, tint: Deck.tint(for: level, stale: data["stale"].bool), height: 6)
+                            if let reset = limit.resetsAt {
+                                Text(Deck.resetText(reset)).font(.system(size: 11)).foregroundStyle(Deck.tertiary)
+                                    .help(reset.formatted(date: .abbreviated, time: .shortened))
+                            }
                         }
                     }
                 }

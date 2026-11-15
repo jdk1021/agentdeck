@@ -75,7 +75,7 @@ brew install --cask jdk1021/tap/agentdeck
 ```sh
 agentdeck refresh              # 이 Mac의 모든 제공자 사용량 수집
 agentdeck status               # 제공자별 한 줄 요약
-agentdeck account add claude Work
+agentdeck account add claude Work        # Work는 선택 사항인 메모, 계정 기본 표시는 로그인 이메일
 agentdeck account login claude <id>      # 해당 계정 홈에서 제공자 자체 로그인 실행
 agentdeck account use claude <id|next>   # 새 세션부터 적용, 실행 중 세션은 그대로
 agentdeck account mode claude auto 95    # 95%에서 자동 전환
@@ -85,6 +85,9 @@ agentdeck shell install --shell bash     # 선택: claude/codex/grok이 선택 �
 ```
 
 전체 명령은 `agentdeck help`를 참고하세요.
+계정에는 로그인 이메일이 먼저 나오고, 지정한 메모는 그 아래에 표시됩니다. **Sign in**은 선택한
+계정에 로그인하고 사용량을 즉시 새로고침합니다. `agentdeck account login claude`도 ID를 생략하면
+선택한 계정에 로그인합니다. 기존에 실행 중인 세션은 원래 로그인 계정을 유지합니다.
 
 ## 지원 제공자
 

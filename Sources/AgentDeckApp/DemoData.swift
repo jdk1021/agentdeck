@@ -75,8 +75,24 @@ enum DemoData {
         }
         for (provider, label, id) in [("claude", "Work (demo)", "demo-work"), ("codex", "Spare (demo)", "demo-spare"), ("grok", "Team (demo)", "demo-team")] {
             var registry = AccountRegistry()
-            registry.accounts = [Account(id: "primary", label: "Personal (demo)", home: "/demo/primary", primary: true, pendingLogin: false),
-                                 Account(id: id, label: label, home: "/demo/\(id)", pendingLogin: false)]
+            let primary = store.paths.home.appendingPathComponent("." + provider)
+            let secondary = store.paths.accounts.appendingPathComponent(provider + "/" + id)
+            registry.accounts = [Account(id: "primary", label: "Personal (demo)", home: primary.path, primary: true, pendingLogin: false),
+                                 Account(id: id, label: label, home: secondary.path, pendingLogin: false)]
+            for (home, email) in [(primary, "personal@example.invalid"), (secondary, "\(provider)@example.invalid")] {
+                try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+                switch provider {
+                case "claude":
+                    let profile = home == primary ? store.paths.home.appendingPathComponent(".claude.json") : home.appendingPathComponent(".claude.json")
+                    try store.write(JSONValue.object(["oauthAccount": .object(["emailAddress": .string(email)])]), to: profile, backup: false)
+                case "codex":
+                    let claims = try JSONEncoder().encode(JSONValue.object(["email": .string(email)]))
+                    let payload = claims.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+                    try store.write(JSONValue.object(["tokens": .object(["id_token": .string("demo.\(payload).demo")])]), to: home.appendingPathComponent("auth.json"), backup: false)
+                default:
+                    try store.write(JSONValue.object(["email": .string(email)]), to: home.appendingPathComponent("auth.json"), backup: false)
+                }
+            }
             registry.switch = provider == "codex" ? "auto" : "manual"
             try store.write(registry, to: store.paths.accounts.appendingPathComponent(provider + ".json"))
         }

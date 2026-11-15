@@ -149,6 +149,40 @@ print(json.dumps({{'home':os.environ.get('CLAUDE_CONFIG_DIR'), 'secure':os.envir
         result = json.loads(self.cli('run', 'claude', '--', env=explicit).stdout)
         self.assertEqual(result['home'], explicit['CLAUDE_CONFIG_DIR']); self.assertTrue(result['key'])
 
+    def test_login_defaults_to_selected_account_and_refreshes_its_identity(self):
+        account = self.add()
+        self.fake('claude', f'''#!{PYTHON}
+import json,os
+from pathlib import Path
+home = Path(os.environ.get('CLAUDE_CONFIG_DIR', str(Path.home() / '.claude')))
+profile = home / '.claude.json' if 'CLAUDE_CONFIG_DIR' in os.environ else Path.home() / '.claude.json'
+profile.parent.mkdir(parents=True, exist_ok=True)
+profile.write_text(json.dumps({{'oauthAccount':{{'emailAddress':'signed-in@example.invalid'}}}}))
+(Path(os.environ['AGENTDECK_HOME']) / 'login-target.json').write_text(json.dumps({{'home':str(home),'secure':os.environ.get('CLAUDE_SECURESTORAGE_CONFIG_DIR')}}))
+''')
+        self.cli('account', 'login', 'claude', account['id'])
+        self.cli('account', 'use', 'claude', account['id'])
+        self.cli('account', 'login', 'claude')
+        target = json.loads((self.root / 'app/login-target.json').read_text())
+        self.assertEqual(target, {'home': account['home'], 'secure': account['home']})
+        registry = json.loads(self.cli('account', 'list', 'claude').stdout)
+        selected = next(a for a in registry['accounts'] if a['id'] == registry['active'])
+        self.assertEqual(selected['email'], 'signed-in@example.invalid')
+        self.assertEqual(selected['label'], 'Fixture Work')
+        self.assertTrue((self.root / 'app/usage/claude.json').exists())
+        self.cli('account', 'login', 'claude', 'primary')
+        target = json.loads((self.root / 'app/login-target.json').read_text())
+        self.assertEqual(target, {'home': str(self.home / '.claude'), 'secure': None})
+
+    def test_account_memo_is_optional_and_can_be_cleared(self):
+        self.cli('account', 'add', 'claude')
+        account = json.loads(self.cli('account', 'list', 'claude').stdout)['accounts'][-1]
+        self.assertEqual(account['label'], '')
+        self.cli('account', 'rename', 'claude', account['id'], 'Work')
+        self.cli('account', 'rename', 'claude', account['id'])
+        account = json.loads(self.cli('account', 'list', 'claude').stdout)['accounts'][-1]
+        self.assertEqual(account['label'], '')
+
     def test_interactive_login_reads_the_terminal(self):
         # Under a real terminal the provider's login must stay in the foreground process group;
         # otherwise reading the keyboard stops it (SIGTTIN) and the sign-in hangs forever.

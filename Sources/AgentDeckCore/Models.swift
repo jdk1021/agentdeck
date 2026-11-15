@@ -88,8 +88,14 @@ public struct Account: Codable, Identifiable, Equatable, Sendable {
     public var home: String
     public var primary: Bool
     public var pendingLogin: Bool
-    public init(id: String, label: String, home: String, primary: Bool = false, pendingLogin: Bool = true) {
+    public var email: String?
+    public var displayName: String { email ?? (pendingLogin ? "Sign in to view email" : "Email unavailable") }
+    /// Keep the existing registry field as the user's optional memo.
+    public var memo: String { primary && label == "Primary" ? "" : label }
+    public var menuTitle: String { memo.isEmpty ? displayName : "\(displayName) · \(memo)" }
+    public init(id: String, label: String, home: String, primary: Bool = false, pendingLogin: Bool = true, email: String? = nil) {
         self.id = id; self.label = label; self.home = home; self.primary = primary; self.pendingLogin = pendingLogin
+        self.email = email
     }
 }
 

@@ -15,7 +15,11 @@ public final class AccountManager: @unchecked Sendable {
         try check(provider)
         var initial = AccountRegistry()
         initial.accounts = [Account(id: "primary", label: "Primary", home: store.paths.home.appendingPathComponent("." + provider.id).path, primary: true, pendingLogin: false)]
-        return try store.read(AccountRegistry.self, at: registryURL(provider), fallback: initial)
+        var registry = try store.read(AccountRegistry.self, at: registryURL(provider), fallback: initial)
+        for i in registry.accounts.indices {
+            registry.accounts[i].email = AccountIdentity.email(provider: provider.id, account: registry.accounts[i], userHome: store.paths.home)
+        }
+        return registry
     }
     @discardableResult public func update<T>(_ provider: Provider, _ body: (inout AccountRegistry) throws -> T) throws -> T {
         try check(provider)
@@ -29,7 +33,7 @@ public final class AccountManager: @unchecked Sendable {
     public func add(_ provider: Provider, label: String) throws -> Account {
         try check(provider)
         let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !label.isEmpty, label.count <= 80 else { throw DeckError.message("Account name must contain 1–80 characters") }
+        guard label.count <= 80 else { throw DeckError.message("Account memo must contain at most 80 characters") }
         return try update(provider) { registry in
             let id = UUID().uuidString.lowercased()
             let home = store.paths.accounts.appendingPathComponent(provider.id).appendingPathComponent(id)
@@ -87,7 +91,8 @@ public final class AccountManager: @unchecked Sendable {
         try projectSettings(provider, primary: store.paths.home.appendingPathComponent("." + provider.id), target: URL(fileURLWithPath: account.home), refresh: true)
     }
     public func rename(_ provider: Provider, id: String, label: String) throws {
-        guard !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, label.count <= 80 else { throw DeckError.message("Invalid account name") }
+        let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard label.count <= 80 else { throw DeckError.message("Account memo must contain at most 80 characters") }
         try update(provider) { registry in
             guard let i = registry.accounts.firstIndex(where: { $0.id == id }) else { throw DeckError.message("Unknown account") }
             registry.accounts[i].label = label

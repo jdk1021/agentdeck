@@ -79,7 +79,7 @@ dependency updates are automated: [docs/automation.md](docs/automation.md).
 ```sh
 agentdeck refresh              # collect usage for every provider on this Mac
 agentdeck status               # one line per provider
-agentdeck account add claude Work
+agentdeck account add claude Work        # Work is an optional memo; the login email identifies the account
 agentdeck account login claude <id>      # opens the provider's own sign-in in that account's home
 agentdeck account use claude <id|next>   # new sessions use it; running ones are untouched
 agentdeck account mode claude auto 95    # automatic switching at 95%
@@ -89,6 +89,9 @@ agentdeck shell install --shell bash     # optional: claude/codex/grok follow th
 ```
 
 Run `agentdeck help` for every command.
+Accounts show their login email first, with any memo underneath. **Sign in** reauthenticates the
+selected account and refreshes its usage immediately; `agentdeck account login claude` also uses the
+selected account when no ID is supplied. Existing sessions keep their original login.
 
 ## Providers
 

@@ -141,8 +141,23 @@ public enum SessionLauncher {
         let args = ([binary.path] + arguments).map { strdup($0) } + [nil]
         let vars = env.sorted(by: { $0.key < $1.key }).map { strdup($0.key + "=" + $0.value) } + [nil]
         defer { args.forEach { free($0) }; vars.forEach { free($0) } }
-        execve(binary.path, args, vars)
-        throw DeckError.message("Could not launch \(binary.lastPathComponent): \(String(cString: strerror(errno)))")
+        // POSIX_SPAWN_SETEXEC replaces this process like execve, but with an explicit signal mask.
+        let failed = spawn(binary.path, args, vars, pid: nil, replacingProcess: true)
+        throw DeckError.message("Could not launch \(binary.lastPathComponent): \(String(cString: strerror(failed)))")
+    }
+    /// Starts a program with every signal unblocked. The CLI runs on Swift's cooperative thread pool
+    /// after its first await, and those threads block nearly all signals (SIGWINCH, SIGINT, ...).
+    /// execve and plain posix_spawn inherit the calling thread's mask, so the agent never saw
+    /// SIGWINCH and kept drawing at its startup width after the terminal was resized.
+    static func spawn(_ path: String, _ args: [UnsafeMutablePointer<CChar>?], _ vars: [UnsafeMutablePointer<CChar>?],
+                      pid: UnsafeMutablePointer<pid_t>?, replacingProcess: Bool) -> Int32 {
+        var attr: posix_spawnattr_t?
+        guard posix_spawnattr_init(&attr) == 0 else { return errno }
+        defer { posix_spawnattr_destroy(&attr) }
+        var empty = sigset_t(); sigemptyset(&empty)
+        posix_spawnattr_setsigmask(&attr, &empty)
+        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSIGMASK | (replacingProcess ? POSIX_SPAWN_SETEXEC : 0)))
+        return posix_spawn(pid, path, nil, &attr, args, vars)
     }
     /// Runs an interactive program (a provider's sign-in) attached to this terminal and waits for it.
     /// It stays in the caller's foreground process group with inherited stdin/stdout/stderr, so it can
@@ -153,7 +168,7 @@ public enum SessionLauncher {
         let vars = environment.sorted(by: { $0.key < $1.key }).map { strdup($0.key + "=" + $0.value) } + [nil]
         defer { args.forEach { free($0) }; vars.forEach { free($0) } }
         var pid: pid_t = 0
-        let spawned = posix_spawn(&pid, binary.path, nil, nil, args, vars)
+        let spawned = spawn(binary.path, args, vars, pid: &pid, replacingProcess: false)
         guard spawned == 0 else { throw DeckError.message("Could not launch \(binary.lastPathComponent): \(String(cString: strerror(spawned)))") }
         // The sign-in owns Ctrl-C while it runs; this process only waits for its result.
         let previous = signal(SIGINT, SIG_IGN)

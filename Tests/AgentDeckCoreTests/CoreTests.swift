@@ -258,4 +258,17 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(Date().timeIntervalSince(quick) < 5)
         XCTAssertEqual(try ChildProcess.run(URL(fileURLWithPath: "/bin/sh"), ["-c", "exit 3"]).status, 3)
     }
+    /// Swift's cooperative pool threads block SIGWINCH; agents launched from there must still receive
+    /// terminal resizes, otherwise they keep their startup width forever.
+    func testLaunchedAgentsReceiveResizeSignalsFromBlockedThreads() throws {
+        // Reproduce a pool thread's mask on this thread; the child exits 0 only if its WINCH trap runs.
+        var block = sigset_t(), previous = sigset_t()
+        sigemptyset(&block); sigaddset(&block, SIGWINCH)
+        pthread_sigmask(SIG_BLOCK, &block, &previous)
+        defer { pthread_sigmask(SIG_SETMASK, &previous, nil) }
+        let script = "trap 'exit 0' WINCH; kill -WINCH $$; sleep 1; exit 1"
+        let status = try SessionLauncher.runInteractive(binary: URL(fileURLWithPath: "/bin/sh"), arguments: ["-c", script],
+                                                        environment: ["PATH": "/usr/bin:/bin"])
+        XCTAssertEqual(status, 0)
+    }
 }
